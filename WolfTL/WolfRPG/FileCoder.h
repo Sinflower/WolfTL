@@ -29,6 +29,9 @@ public:
 		m_fileName(fileName),
 		m_cryptHeader(cryptHeader)
 	{
+		if (mode == WRITE)
+			CreateBackup(fileName);
+
 		_wfopen_s(&m_pFile, fileName.c_str(), (mode == READ ? L"rb" : L"wb"));
 
 		if (m_pFile == nullptr)

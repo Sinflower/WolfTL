@@ -48,3 +48,15 @@ static inline std::string ToUTF8(const std::wstring& utf16String)
 	static std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
 	return conv.to_bytes(utf16String);
 }
+
+static inline void CreateBackup(const tString& file)
+{
+	// If the file does not exist, do not create a backup
+	if (!fs::exists(file)) return;
+
+	// If the backup file already exists, do not create a new backup
+	if (fs::exists(file + L".bak")) return;
+
+	// Create a backup of the file
+	fs::copy_file(file, file + L".bak");
+}

@@ -54,7 +54,7 @@ class WolfTL
 	inline static const tString MAP_OUTPUT   = TEXT("dump/mps/");
 	inline static const tString DB_OUTPUT    = TEXT("dump/db/");
 	inline static const tString COM_OUTPUT   = TEXT("dump/common/");
-	inline static const tString PATCHED_DATA = TEXT("patched/");
+	inline static const tString PATCHED_DATA = TEXT("/patched/data/");
 
 public:
 	WolfTL(const tString& dataPath, const tString& outputPath) :
@@ -77,7 +77,7 @@ public:
 		commonEvents2Json();
 	}
 
-	void Patch()
+	void Patch(const bool& inplace = false)
 	{
 		if (!m_wolf.Valid())
 		{
@@ -97,7 +97,7 @@ public:
 		patchCommonEvents(m_outputPath);
 
 		// Save the patched data
-		m_wolf.Save2File(std::format(TEXT("{}/{}"), m_outputPath, PATCHED_DATA));
+		m_wolf.Save2File((inplace ? m_dataPath : (m_outputPath + PATCHED_DATA)));
 	}
 
 private:
@@ -215,6 +215,7 @@ int main(int argc, char* argv[])
 		std::cout << "Modes:" << std::endl;
 		std::cout << "  create - Create the Patch" << std::endl;
 		std::cout << "  patch  - Apply the Patch" << std::endl;
+		std::cout << "  patch_ip  - Apply the Patch in-place, i.e., override the original data files" << std::endl;
 		return 0;
 	}
 
@@ -244,8 +245,10 @@ int main(int argc, char* argv[])
 			wolf.ToJson();
 		else if (mode == TEXT("patch"))
 			wolf.Patch();
+		else if (mode == TEXT("patch_ip"))
+			wolf.Patch(true);
 		else
-			std::cerr << "Invalid mode" << std::endl;
+			std::wcerr << L"Invalid mode: " << mode << std::endl;
 	}
 	catch(const std::exception& e)
 	{

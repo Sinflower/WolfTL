@@ -45,9 +45,8 @@ public:
 	{
 		checkValid();
 
-		tString dataDir      = outputPath + L"/data/";
-		tString basicDataDir = dataDir + L"BasicData/";
-		tString mapDataDir   = dataDir + L"MapData/";
+		tString basicDataDir = outputPath + L"/BasicData/";
+		tString mapDataDir   = outputPath + L"/MapData/";
 
 		checkAndCreateDir(basicDataDir);
 		checkAndCreateDir(mapDataDir);
