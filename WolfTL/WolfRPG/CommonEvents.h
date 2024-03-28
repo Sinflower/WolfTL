@@ -5,6 +5,7 @@
 #include "WolfRPGUtils.h"
 
 #include <array>
+#include <format>
 #include <fstream>
 #include <nlohmann\json.hpp>
 
@@ -40,16 +41,16 @@ public:
 		coder.WriteString(m_unknown11);
 		coder.WriteString(m_description);
 		coder.WriteByte(0x8F);
-		coder.Write(MAGIC_NUMBER);
+		coder.WriteInt(static_cast<uint32_t>(m_unknown3.size()));
 
 		for (const tString& str : m_unknown3)
 			coder.WriteString(str);
 
-		coder.Write(MAGIC_NUMBER);
+		coder.WriteInt(static_cast<uint32_t>(m_unknown4.size()));
 		for (const uint8_t& byte : m_unknown4)
 			coder.WriteByte(byte);
 
-		coder.Write(MAGIC_NUMBER);
+		coder.WriteInt(static_cast<uint32_t>(m_unknown5.size()));
 		for (const tStrings& strs : m_unknown5)
 		{
 			coder.WriteInt(strs.size());
@@ -57,7 +58,7 @@ public:
 				coder.WriteString(str);
 		}
 
-		coder.Write(MAGIC_NUMBER);
+		coder.WriteInt(static_cast<uint32_t>(m_unknown6.size()));
 		for (const uInts& uints : m_unknown6)
 		{
 			coder.WriteInt(uints.size());
@@ -167,7 +168,8 @@ private:
 		if (indicator != 0x8E)
 			throw WolfRPGException(ERROR_TAG "CommonEvent header indicator not 0x8E (got 0x" + Dec2Hex(indicator) + ")");
 
-		m_id       = coder.ReadInt();
+		m_id = coder.ReadInt();
+
 		m_unknown1 = coder.ReadInt();
 		m_unknown2 = coder.Read(7);
 		m_name     = coder.ReadString();
@@ -188,17 +190,17 @@ private:
 
 		indicator = coder.ReadByte();
 		if (indicator != 0x8F)
-			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x8F (got 0x" + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x8F (got " + Dec2Hex(indicator) + ")");
 
-		VERIFY_MAGIC(coder, MAGIC_NUMBER);
+		m_unknown3.resize(coder.ReadInt());
 		for (tString& str : m_unknown3)
 			str = coder.ReadString();
 
-		VERIFY_MAGIC(coder, MAGIC_NUMBER);
+		m_unknown4.resize(coder.ReadInt());
 		for (uint8_t& byte : m_unknown4)
 			byte = coder.ReadByte();
 
-		VERIFY_MAGIC(coder, MAGIC_NUMBER);
+		m_unknown5.resize(coder.ReadInt());
 		for (tStrings& strs : m_unknown5)
 		{
 			strs = tStrings(coder.ReadInt());
@@ -206,7 +208,7 @@ private:
 				str = coder.ReadString();
 		}
 
-		VERIFY_MAGIC(coder, MAGIC_NUMBER);
+		m_unknown6.resize(coder.ReadInt());
 		for (uInts& uints : m_unknown6)
 		{
 			uints = uInts(coder.ReadInt());
@@ -220,7 +222,7 @@ private:
 
 		indicator = coder.ReadByte();
 		if (indicator != 0x91)
-			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x91 (got 0x" + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x91 (got " + Dec2Hex(indicator) + ")");
 
 		m_unknown9 = coder.ReadString();
 
@@ -229,7 +231,7 @@ private:
 		{
 			if (indicator == 0x91) return true;
 
-			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x92 or 0x91 (got 0x" + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x92 or 0x91 (got " + Dec2Hex(indicator) + ")");
 		}
 
 		m_unknown10Valid = true;
@@ -238,7 +240,7 @@ private:
 
 		indicator = coder.ReadByte();
 		if (indicator != 0x92)
-			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x92 (got 0x" + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x92 (got " + Dec2Hex(indicator) + ")");
 
 		return true;
 	}
@@ -253,10 +255,10 @@ private:
 	Command::Commands m_commands        = {};
 	tString m_unknown11                 = TEXT("");
 	tString m_description               = TEXT("");
-	std::array<tString, 10> m_unknown3  = {};
-	std::array<uint8_t, 10> m_unknown4  = {};
-	std::array<tStrings, 10> m_unknown5 = {};
-	std::array<uInts, 10> m_unknown6    = {};
+	std::vector<tString> m_unknown3     = {};
+	std::vector<uint8_t> m_unknown4     = {};
+	std::vector<tStrings> m_unknown5    = {};
+	std::vector<uInts> m_unknown6       = {};
 	Bytes m_unknown7                    = {};
 	std::array<tString, 100> m_unknown8 = {};
 	tString m_unknown9                  = TEXT("");
@@ -264,8 +266,6 @@ private:
 	uint32_t m_unknown12                = 0;
 
 	bool m_unknown10Valid = false;
-
-	inline static const Bytes MAGIC_NUMBER = { 0x0A, 0x00, 0x00, 0x00 };
 };
 
 class CommonEvents
@@ -286,13 +286,16 @@ public:
 	void Dump(const tString& outputDir) const
 	{
 		tString outputFN = outputDir + L"/" + GetFileName(m_fileName);
-		FileCoder coder(outputFN, WRITE);
+		FileCoder coder(outputFN, WRITE, DAT_SEED_INDICES);
+
 		coder.Write(MAGIC_NUMBER);
+
+		coder.WriteByte(m_startIndicator);
 		coder.WriteInt(m_events.size());
 		for (const CommonEvent& ev : m_events)
 			ev.Dump(coder);
 
-		coder.WriteByte(0x8F);
+		coder.WriteByte(m_terminator);
 	}
 
 	void ToJson(const tString& outputFolder) const
@@ -344,8 +347,9 @@ public:
 private:
 	bool init(const tString& fileName)
 	{
-		FileCoder coder(fileName, READ);
+		FileCoder coder(fileName, READ, DAT_SEED_INDICES);
 		VERIFY_MAGIC(coder, MAGIC_NUMBER);
+		m_startIndicator  = coder.ReadByte();
 		uint32_t eventCnt = coder.ReadInt();
 		m_events          = CommonEvent::CommonEvents(eventCnt);
 
@@ -355,9 +359,9 @@ private:
 			m_events[ev.GetID()] = ev;
 		}
 
-		uint8_t terminator = coder.ReadByte();
-		if (terminator != 0x8F)
-			throw WolfRPGException(ERROR_TAG "CommonEvent data terminator not 0x8F (got 0x" + Dec2Hex(terminator) + ")");
+		m_terminator = coder.ReadByte();
+		if (m_terminator < 0x89)
+			throw WolfRPGException(ERROR_TAG "CommonEvent data terminator smaller than 0x89 (got " + Dec2Hex(m_terminator) + ")");
 
 		if (!coder.IsEof())
 			throw WolfRPGException(ERROR_TAG "CommonEvent has more data than expected");
@@ -366,9 +370,14 @@ private:
 	}
 
 private:
-	bool m_valid                       = false;
-	CommonEvent::CommonEvents m_events = {};
-	tString m_fileName                 = TEXT("");
+	bool m_valid = false;
 
-	inline static const Bytes MAGIC_NUMBER = { 0x00, 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x43, 0x00, 0x8F };
+	CommonEvent::CommonEvents m_events = {};
+
+	tString m_fileName    = TEXT("");
+	BYTE m_startIndicator = 0;
+	BYTE m_terminator     = 0;
+
+	inline static const uInts DAT_SEED_INDICES{ 0, 3, 9 };
+	inline static const MagicNumber MAGIC_NUMBER = {{ 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x43, 0x00}, 5 };
 };

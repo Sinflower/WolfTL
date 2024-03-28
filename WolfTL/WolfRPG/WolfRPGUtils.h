@@ -27,6 +27,16 @@ static inline std::string Dec2Hex(T i)
 	return stream.str();
 }
 
+template<typename T>
+static inline std::wstring Dec2HexW(T i)
+{
+	std::wstringstream stream;
+	stream << L"0x" << std::setfill(wchar_t('0')) << std::setw(sizeof(T) * 2);
+	// To counter act problems with 1-byte types
+	stream << std::hex << (sizeof(T) == 1 ? static_cast<unsigned short>(i) : i);
+	return stream.str();
+}
+
 static inline const tString GetFileName(const tString& file)
 {
 	return fs::path(file).filename();

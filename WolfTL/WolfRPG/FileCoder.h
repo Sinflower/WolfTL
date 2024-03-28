@@ -1,14 +1,19 @@
 #pragma once
 
 #include "Types.h"
-#include "WolfRPGUtils.h"
 #include "WolfRPGException.h"
+#include "WolfRPGUtils.h"
 
 #include <array>
 #include <iostream>
 
 static const size_t CRYPT_HEADER_SIZE   = 10;
 static const size_t DECRYPT_INTERVALS[] = { 1, 2, 5 };
+
+namespace fileCoder
+{
+static bool g_isUTF8 = false;
+}
 
 #define CHECK_FILE_OPEN \
 	if (m_pFile == nullptr) throw WolfRPGException(ERROR_TAG "Trying to read from unopened file.");
@@ -17,6 +22,59 @@ enum MODE
 {
 	READ,
 	WRITE
+};
+
+class MagicNumber
+{
+public:
+	MagicNumber(const Bytes& data, const int32_t& utf8Idx = -1) :
+		m_data(data),
+		m_utf8Idx(utf8Idx)
+	{
+	}
+
+	bool operator==(const Bytes& check) const
+	{
+		if (std::equal(m_data.begin(), m_data.end(), check.begin()))
+			return true;
+
+		if (m_utf8Idx != -1)
+		{
+			Bytes utf8Data = m_data;
+			utf8Data[m_utf8Idx] = 0x55;
+			return std::equal(utf8Data.begin(), utf8Data.end(), check.begin());
+		}
+		else
+			return false;
+	}
+
+	const Bytes& GetData() const
+	{
+		return m_data;
+	}
+
+	Bytes GetUTF8Data() const
+	{
+		Bytes utf8Data = m_data;
+		utf8Data[m_utf8Idx] = 0x55;
+		return utf8Data;
+	}
+
+	std::size_t Size() const
+	{
+		return m_data.size();
+	}
+
+	bool IsUTF8(const Bytes& data) const
+	{
+		if (m_utf8Idx == -1) return false;
+
+		return (data[m_utf8Idx] == 0x55);
+	}
+
+private:
+	Bytes m_data;
+	int32_t m_utf8Idx = -1;
 };
 
 class FileCoder
@@ -93,6 +151,12 @@ public:
 		return !m_cryptHeader.empty();
 	}
 
+	void Seek(const int32_t& pos)
+	{
+		CHECK_FILE_OPEN;
+		fseek(m_pFile, pos, SEEK_CUR);
+	}
+
 	uint32_t Tell() const
 	{
 		if (m_pFile == nullptr)
@@ -109,7 +173,7 @@ public:
 		return (feof(m_pFile) == 0);
 	}
 
-	Bytes Read(const size_t size = -1)
+	Bytes Read(const size_t& size = -1)
 	{
 		Bytes data;
 
@@ -164,9 +228,14 @@ public:
 		if (size == 0)
 			throw WolfRPGException(ERROR_TAG "Zero length string encountered.");
 
-		Bytes data   = Read(size);
-		tString wstr = sjis2utf8(data);
-		return wstr;
+		Bytes data = Read(size);
+		if (fileCoder::g_isUTF8)
+		{
+			std::string str = std::string(reinterpret_cast<const char*>(data.data()), data.size() - ((data.back() == 0x0) ? 1 : 0));
+			return ToUTF16(str);
+		}
+		else
+			return sjis2utf8(data);
 	}
 
 	Bytes ReadByteArray()
@@ -211,20 +280,40 @@ public:
 		return false;
 	}
 
-	void Skip(const long size)
+	bool Verify(const MagicNumber& magicNumber)
+	{
+		Bytes data = Read(magicNumber.Size());
+		if (magicNumber == data)
+		{
+			fileCoder::g_isUTF8 = magicNumber.IsUTF8(data);
+			return true;
+		}
+
+		return false;
+	}
+
+	void Skip(const long& size)
 	{
 		CHECK_FILE_OPEN;
 		fseek(m_pFile, size, SEEK_CUR);
 	}
 
-	void Write(Bytes data)
+	void Write(const Bytes& data)
 	{
 		CHECK_FILE_OPEN;
 
 		fwrite(data.data(), sizeof(uint8_t), data.size(), m_pFile);
 	}
+	
+	void Write(const MagicNumber& mn)
+	{
+		if (fileCoder::g_isUTF8)
+			Write(mn.GetUTF8Data());
+		else
+			Write(mn.GetData());
+	}
 
-	void WriteByte(uint8_t data)
+	void WriteByte(const uint8_t& data)
 	{
 		CHECK_FILE_OPEN;
 
@@ -233,13 +322,13 @@ public:
 
 #ifdef BIT_64
 	// For 64 bit an additional method is required to properly handle size_t inputs
-	void WriteInt(size_t data)
+	void WriteInt(const size_t& data)
 	{
 		WriteInt(static_cast<uint32_t>(data));
 	}
 #endif
 
-	void WriteInt(uint32_t data)
+	void WriteInt(const uint32_t& data)
 	{
 		CHECK_FILE_OPEN;
 
@@ -250,12 +339,22 @@ public:
 	{
 		CHECK_FILE_OPEN;
 
-		Bytes str = utf82sjis(wstr);
+		Bytes str;
+		
+		if (fileCoder::g_isUTF8)
+		{
+			std::string s = ToUTF8(wstr);
+			str = Bytes(s.begin(), s.end());
+			str.push_back(0x0);
+		}
+		else
+			str = utf82sjis(wstr);
+
 		WriteInt(static_cast<uint32_t>(str.size()));
 		Write(str);
 	}
 
-	void WriteByteArray(Bytes data)
+	void WriteByteArray(const Bytes& data)
 	{
 		CHECK_FILE_OPEN;
 
@@ -264,7 +363,7 @@ public:
 			WriteByte(byte);
 	}
 
-	void WriteIntArray(uInts data)
+	void WriteIntArray(const uInts& data)
 	{
 		CHECK_FILE_OPEN;
 
@@ -273,7 +372,7 @@ public:
 			WriteInt(uint);
 	}
 
-	void WriteStringArray(tStrings strs)
+	void WriteStringArray(const tStrings& strs)
 	{
 		CHECK_FILE_OPEN;
 

@@ -23,13 +23,9 @@ public:
 
 		FileCoder coder(fileName, READ, SEED_INDICES);
 		if (coder.IsEncrypted())
-		{
 			m_cryptHeader = coder.GetCryptHeader();
-		}
 		else
-		{
 			VERIFY_MAGIC(coder, MAGIC_NUMBER)
-		}
 
 		m_unknown1    = coder.ReadByteArray();
 		m_fileVersion = coder.ReadInt();
@@ -54,9 +50,9 @@ public:
 		if (m_fileVersion >= 9)
 			m_version = coder.ReadString();
 
-		coder.Skip(4);
+		m_unknown3 = coder.ReadInt();
 
-		m_unknown3 = coder.Read();
+		m_unknown4 = coder.Read();
 
 		if (!coder.IsEof())
 			throw WolfRPGException(ERROR_TAG L"GameDat has more data than expected");
@@ -84,7 +80,8 @@ public:
 		tString outputFN = outputDir + L"/" + GetFileName(m_fileName);
 		FileCoder coder(outputFN, WRITE, SEED_INDICES, m_cryptHeader);
 
-		if (m_cryptHeader.empty()) coder.Write(MAGIC_NUMBER);
+		if (m_cryptHeader.empty())
+			coder.Write(MAGIC_NUMBER);
 
 		coder.WriteByteArray(m_unknown1);
 		coder.WriteInt(m_fileVersion);
@@ -96,8 +93,8 @@ public:
 			coder.WriteString(font);
 		coder.WriteString(m_defaultPCGraphic);
 		if (m_fileVersion >= 9) coder.WriteString(m_version);
-		coder.WriteInt(coder.Tell() + 4 + static_cast<uint32_t>(m_unknown3.size()) - 1);
-		coder.Write(m_unknown3);
+		coder.WriteInt(m_unknown3);
+		coder.Write(m_unknown4);
 	}
 
 	const tString& GetTitle() const
@@ -134,9 +131,10 @@ private:
 	tStrings m_subFonts        = {};
 	tString m_defaultPCGraphic = TEXT("");
 	tString m_version          = TEXT("");
-	Bytes m_unknown3           = {};
+	uint32_t m_unknown3        = 0;
+	Bytes m_unknown4           = {};
 
 	inline static const uInts SEED_INDICES{ 0, 8, 6 };
-	inline static const Bytes MAGIC_NUMBER{ 0x57, 0x00, 0x00, 0x4f, 0x4c, 0x00, 0x46, 0x4d, 0x00 };
+	inline static const MagicNumber MAGIC_NUMBER{ { 0x57, 0x00, 0x00, 0x4f, 0x4c, 0x00, 0x46, 0x4d, 0x00 }, 8 };
 	inline static const tString MAGIC_STRING = L"0000-0000";
 };

@@ -387,13 +387,29 @@ public:
 		FileCoder coder(fileName, READ);
 		VERIFY_MAGIC(coder, MAGIC_NUMBER);
 
+		m_unknown1 = coder.ReadInt();
+		m_unknown2 = coder.ReadByte();
+		m_unknown3 = coder.ReadString();
+
 		m_tilesetID = coder.ReadInt();
 		m_width     = coder.ReadInt();
 		m_height    = coder.ReadInt();
 
 		uint32_t eventCount = coder.ReadInt();
 
-		m_tiles = coder.Read(m_width * m_height * 3 * 4);
+		bool readTiles = true;
+
+		if (fileCoder::g_isUTF8)
+		{
+			int32_t v = coder.ReadInt();
+			if (v == -1)
+				readTiles = false;
+			else
+				coder.Seek(-4);
+		}
+
+		if (readTiles)
+			m_tiles = coder.Read(m_width * m_height * 3 * 4);
 
 		uint8_t indicator = 0x0;
 		while ((indicator = coder.ReadByte()) == 0x6F)
@@ -427,11 +443,21 @@ public:
 		tString outputFN = outputDir + L"/" + ::GetFileName(m_fileName);
 		FileCoder coder(outputFN, WRITE);
 		coder.Write(MAGIC_NUMBER);
+
+		coder.WriteInt(m_unknown1);
+		coder.WriteByte(m_unknown2);
+		coder.WriteString(m_unknown3);
+
 		coder.WriteInt(m_tilesetID);
 		coder.WriteInt(m_width);
 		coder.WriteInt(m_height);
 		coder.WriteInt(static_cast<uint32_t>(m_events.size()));
-		coder.Write(m_tiles);
+
+		if (fileCoder::g_isUTF8 && m_tiles.empty())
+			coder.WriteInt(0xFFFFFFFF);
+		else
+			coder.Write(m_tiles);
+
 		for (Event event : m_events)
 		{
 			coder.WriteByte(0x6F);
@@ -479,21 +505,19 @@ public:
 private:
 	tString m_fileName;
 
+	uint32_t m_unknown1 = 0;
+	uint8_t m_unknown2  = 0;
+	tString m_unknown3  = TEXT("");
+
 	uint32_t m_tilesetID = 0;
 	uint32_t m_width     = 0;
 	uint32_t m_height    = 0;
 	Bytes m_tiles        = {};
 	Events m_events      = {};
 
-	inline static const Bytes MAGIC_NUMBER{
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x57, 0x4F, 0x4C, 0x46, 0x4D, 0x00,
-		0x00, 0x00, 0x00, 0x00,
-		0x64, 0x00, 0x00, 0x00,
-		0x65,
-		0x05, 0x00, 0x00, 0x00,
-		0x82, 0xC8, 0x82, 0xB5, 0x00
-	};
+	inline static const MagicNumber MAGIC_NUMBER{ { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+													0x57, 0x4F, 0x4C, 0x46, 0x4D, 0x00, 0x00, 0x00, 0x00, 0x00 },
+												  16 };
 };
 
 using Maps = std::vector<Map>;

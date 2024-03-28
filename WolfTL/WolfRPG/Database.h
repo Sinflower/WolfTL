@@ -494,11 +494,13 @@ public:
 		else
 			coder.Write(DAT_MAGIC_NUMBER);
 
+		coder.WriteByte(m_startEndIndicator);
+
 		coder.WriteInt(m_types.size());
 		for (const Type& type : m_types)
 			type.DumpDat(coder);
 
-		coder.WriteByte(0xC1);
+		coder.WriteByte(m_startEndIndicator);
 	}
 
 	void ToJson(const tString& outputFolder) const
@@ -568,9 +570,9 @@ private:
 			m_unknownEncrypted1 = coder.ReadByte();
 		}
 		else
-		{
 			VERIFY_MAGIC(coder, DAT_MAGIC_NUMBER)
-		}
+
+		m_startEndIndicator = coder.ReadByte();
 
 		uint32_t typeCnt = coder.ReadInt();
 		if (typeCnt != m_types.size())
@@ -590,8 +592,8 @@ private:
 			}
 		}
 
-		if (coder.ReadByte() != 0xC1)
-			throw WolfRPGException(ERROR_TAG L"No C1 terminator at the end of \"" + datFileName + L"\"");
+		if (coder.ReadByte() != m_startEndIndicator)
+			throw WolfRPGException(ERROR_TAG L"No " + Dec2HexW(m_startEndIndicator) + L" terminator at the end of \"" + datFileName + L"\"");
 
 		if (!coder.IsEof())
 			throw WolfRPGException(ERROR_TAG L"Database [" + datFileName + L"] has more data than expected");
@@ -604,12 +606,13 @@ private:
 	Bytes m_cryptHeader         = {};
 	uint8_t m_unknownEncrypted1 = 0;
 
-	bool m_valid = false;
+	BYTE m_startEndIndicator = 0;
+	bool m_valid             = false;
 	tString m_projectFileName;
 	tString m_datFileName;
 
 	inline static const uInts DAT_SEED_INDICES{ 0, 3, 9 };
-	inline static const Bytes DAT_MAGIC_NUMBER{ 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x4D, 0x00, 0xC1 };
+	inline static const MagicNumber DAT_MAGIC_NUMBER{ { 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x4D, 0x00 }, 5 };
 };
 
 using Databases = std::vector<Database>;
