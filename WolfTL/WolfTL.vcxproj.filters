@@ -59,15 +59,6 @@
     <ClInclude Include="WolfRPG\WolfRPGUtils.h">
       <Filter>WolfRPG</Filter>
     </ClInclude>
-    <ClInclude Include="Context.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Utils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="JsonDumper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="3rdParty\nlohmann\json.hpp">
       <Filter>3rdParty</Filter>
     </ClInclude>

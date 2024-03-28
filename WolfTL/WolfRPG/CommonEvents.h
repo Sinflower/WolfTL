@@ -305,7 +305,7 @@ public:
 			nlohmann::ordered_json j = ev.ToJson();
 
 			// Get the file name without the extension
-			const tString comEvName  = std::format(TEXT("{}_{}"), ev.GetID(), escapePath(ev.GetName()));
+			const tString comEvName  = std::format(TEXT("{}_{}"), ev.GetID(), EscapePath(ev.GetName()));
 			const tString outputFile = outputFolder + L"/" + comEvName + L".json";
 
 			std::ofstream out(outputFile);
@@ -319,7 +319,7 @@ public:
 	{
 		for (CommonEvent& ev : m_events)
 		{
-			const tString comEvName = std::format(TEXT("{}_{}"), ev.GetID(), escapePath(ev.GetName()));
+			const tString comEvName = std::format(TEXT("{}_{}"), ev.GetID(), EscapePath(ev.GetName()));
 			const tString patchFile = patchFolder + L"/" + comEvName + L".json";
 
 			if (!std::filesystem::exists(patchFile))
@@ -379,5 +379,5 @@ private:
 	BYTE m_terminator     = 0;
 
 	inline static const uInts DAT_SEED_INDICES{ 0, 3, 9 };
-	inline static const MagicNumber MAGIC_NUMBER = {{ 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x43, 0x00}, 5 };
+	inline static const MagicNumber MAGIC_NUMBER = { { 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x43, 0x00 }, 5 };
 };

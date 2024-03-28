@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <iostream>
 #include <locale>
+#include <regex>
 #include <sstream>
 #include <string>
 
@@ -69,4 +70,36 @@ static inline void CreateBackup(const tString& file)
 
 	// Create a backup of the file
 	fs::copy_file(file, file + L".bak");
+}
+
+static inline tString StrReplaceAll(tString str, const tString& from, const tString& to)
+{
+	size_t startPos = 0;
+	if (from.empty() || str.empty()) return str;
+
+	while ((startPos = str.find(from, startPos)) != std::string::npos)
+	{
+		str.replace(startPos, from.length(), to);
+		startPos += to.length();
+	}
+
+	return str;
+}
+
+// Strip all leading / trailing whitespace, including fullwidth spaces
+static inline tString FullStrip(tString str)
+{
+	StrReplaceAll(str, L" ", L"");
+	str = std::regex_replace(str, std::wregex(L"^\\u3000*"), L"");
+	str = std::regex_replace(str, std::wregex(L"\\u3000*$"), L"");
+
+	return str;
+}
+
+static inline tString EscapePath(tString path)
+{
+	path = FullStrip(path);
+	path = std::regex_replace(path, std::wregex(L"[\\/\\\\:\\*\\?\\\"<>\\|]"), L"_");
+
+	return path;
 }

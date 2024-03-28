@@ -143,9 +143,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3rdParty\nlohmann\json.hpp" />
-    <ClInclude Include="Context.h" />
-    <ClInclude Include="JsonDumper.h" />
-    <ClInclude Include="Utils.h" />
     <ClInclude Include="WolfRPG\Command.h" />
     <ClInclude Include="WolfRPG\CommonEvents.h" />
     <ClInclude Include="WolfRPG\Database.h" />

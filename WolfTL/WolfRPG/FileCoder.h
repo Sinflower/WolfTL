@@ -40,7 +40,7 @@ public:
 
 		if (m_utf8Idx != -1)
 		{
-			Bytes utf8Data = m_data;
+			Bytes utf8Data      = m_data;
 			utf8Data[m_utf8Idx] = 0x55;
 			return std::equal(utf8Data.begin(), utf8Data.end(), check.begin());
 		}
@@ -55,7 +55,7 @@ public:
 
 	Bytes GetUTF8Data() const
 	{
-		Bytes utf8Data = m_data;
+		Bytes utf8Data      = m_data;
 		utf8Data[m_utf8Idx] = 0x55;
 		return utf8Data;
 	}
@@ -304,7 +304,7 @@ public:
 
 		fwrite(data.data(), sizeof(uint8_t), data.size(), m_pFile);
 	}
-	
+
 	void Write(const MagicNumber& mn)
 	{
 		if (fileCoder::g_isUTF8)
@@ -340,11 +340,11 @@ public:
 		CHECK_FILE_OPEN;
 
 		Bytes str;
-		
+
 		if (fileCoder::g_isUTF8)
 		{
 			std::string s = ToUTF8(wstr);
-			str = Bytes(s.begin(), s.end());
+			str           = Bytes(s.begin(), s.end());
 			str.push_back(0x0);
 		}
 		else
