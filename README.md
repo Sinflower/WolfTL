@@ -1,6 +1,7 @@
 # WolfTL
 
-This is a simple tool for extracting data relevant for translation from WolfRPG `.dat` and `.mps` files and storing them in JSON files.
+This is a simple tool for extracting translation-relevant data from WolfRPG `.dat` and `.mps` files and storing them in JSON files.<BR>
+The data parsing code is based on [Wolf Trans](https://github.com/elizagamedev/wolftrans).
 
 ## Usage
 
@@ -9,10 +10,11 @@ WolfTL.exe <DATA-FOLDER> <OUTPUT-FOLDER> <MODE>
 ```
 
 Possible modes are:<br>
-`create` - Create the Patch<br>
-`patch`  - Apply the Patch
+`create`   - Create the Patch<br>
+`patch`    - Apply the Patch
+`patch_ip` - Apply the Patch in place, i.e., override the original data files
 
-After creating the Patch, the `OUTPUT-FOLDER` will contain a folder called `dump`, which contains folders for the three different types (CommonEvents, Databases, and Maps).
+After creating the Patch, the `OUTPUT-FOLDER` will contain a folder called `dump`, which contains folders for the three types (CommonEvents, Databases, and Maps).
 After applying the Patch, a new folder called `patched` will be created, containing the `data` folder with the updated files inside.
 
 ### Example Execution
@@ -31,4 +33,4 @@ WolfTL.exe "D:\Path with Spaces\Game\Data" "D:\Other Path with Spaces\Game" crea
 
 ## Note
 
-Very new, and WolfPro games are currently not supported. If the game is not supported, an error message regarding invalid magic should be printed.
+WolfPro games are supported. After patching, the files will be unencrypted, allowing them to be opened in any Wolf RPG editor.
