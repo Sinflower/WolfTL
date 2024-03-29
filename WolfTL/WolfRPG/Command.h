@@ -124,16 +124,28 @@ public:
 
 	virtual nlohmann::ordered_json ToJson() const
 	{
-		if (m_stringArgs.empty())
+		if (m_stringArgs.empty() && m_args.empty())
 			return nlohmann::ordered_json();
 
 		nlohmann::ordered_json json;
-		json["code"]       = static_cast<int32_t>(m_cid);
-		json["codeStr"]    = ToUTF8(GetClassString());
-		json["stringArgs"] = nlohmann::ordered_json::array();
+		json["code"]    = static_cast<int32_t>(m_cid);
+		json["codeStr"] = ToUTF8(GetClassString());
 
-		for (const tString& arg : m_stringArgs)
-			json["stringArgs"].push_back(ToUTF8(arg));
+		if (!m_stringArgs.empty())
+		{
+			json["stringArgs"] = nlohmann::ordered_json::array();
+
+			for (const tString& arg : m_stringArgs)
+				json["stringArgs"].push_back(ToUTF8(arg));
+		}
+
+		if (!m_args.empty())
+		{
+			json["intArgs"] = nlohmann::ordered_json::array();
+
+			for (const uint32_t& arg : m_args)
+				json["intArgs"].push_back(arg);
+		}
 
 		return json;
 	}
@@ -143,12 +155,19 @@ public:
 		if (!j.contains("code"))
 			throw WolfRPGException(ERROR_TAG "Command::Patch() - JSON does not contain \"code\"");
 
-		if (!j.contains("stringArgs"))
-			throw WolfRPGException(ERROR_TAG "Command::Patch() - JSON does not contain \"stringArgs\"");
+		if (j.contains("stringArgs"))
+		{
+			m_stringArgs.clear();
+			for (const auto& arg : j["stringArgs"])
+				m_stringArgs.push_back(ToUTF16(arg));
+		}
 
-		m_stringArgs.clear();
-		for (const auto& arg : j["stringArgs"])
-			m_stringArgs.push_back(ToUTF16(arg));
+		if (j.contains("intArgs"))
+		{
+			m_args.clear();
+			for (const auto& arg : j["intArgs"])
+				m_args.push_back(arg);
+		}
 	}
 
 	bool IsUpdatable() const

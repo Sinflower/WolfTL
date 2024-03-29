@@ -23,12 +23,15 @@ public:
 	nlohmann::ordered_json ToJson() const
 	{
 		nlohmann::ordered_json j;
-		j["name"]       = ToUTF8(m_name);
-		j["type"]       = m_type;
-		j["stringArgs"] = nlohmann::ordered_json::array();
+		j["name"] = ToUTF8(m_name);
 
-		for (const tString& stringArg : m_stringArgs)
-			j["stringArgs"].push_back(ToUTF8(stringArg));
+		if (!m_stringArgs.empty())
+		{
+			j["stringArgs"] = nlohmann::ordered_json::array();
+
+			for (const tString& stringArg : m_stringArgs)
+				j["stringArgs"].push_back(ToUTF8(stringArg));
+		}
 
 		return j;
 	}
@@ -38,14 +41,14 @@ public:
 		if (!j.contains("name"))
 			throw WolfRPGException(ERROR_TAG L"Field 'name' not found in patch");
 
-		if (!j.contains("stringArgs"))
-			throw WolfRPGException(ERROR_TAG L"Field 'stringArgs' not found in patch");
+		if (j.contains("stringArgs"))
+		{
+			m_name = ToUTF16(j["name"].get<std::string>());
 
-		m_name = ToUTF16(j["name"].get<std::string>());
-
-		m_stringArgs.clear();
-		for (const auto& stringArg : j["stringArgs"])
-			m_stringArgs.push_back(ToUTF16(stringArg.get<std::string>()));
+			m_stringArgs.clear();
+			for (const auto& stringArg : j["stringArgs"])
+				m_stringArgs.push_back(ToUTF16(stringArg.get<std::string>()));
+		}
 	}
 
 	void ReadDat(FileCoder& coder)
@@ -150,15 +153,6 @@ using Fields = std::vector<Field>;
 class Data
 {
 public:
-	struct TranslatableEntity
-	{
-		const Field& _field;
-		const tString& _value;
-	};
-
-	using TranslatableEntities = std::vector<TranslatableEntity>;
-
-public:
 	Data() = default;
 
 	explicit Data(FileCoder& coder)
@@ -174,11 +168,24 @@ public:
 	nlohmann::ordered_json ToJson() const
 	{
 		nlohmann::ordered_json j;
-		j["name"]         = ToUTF8(m_name);
-		j["stringValues"] = nlohmann::ordered_json::array();
+		j["name"] = ToUTF8(m_name);
+		j["data"] = nlohmann::json::array();
 
-		for (const tString& str : m_stringValues)
-			j["stringValues"].push_back(ToUTF8(str));
+		if (m_stringValues.empty() && m_intValues.empty())
+			return j;
+
+		for (const Field& field : m_fields)
+		{
+			nlohmann::ordered_json fieldData;
+			fieldData["name"] = ToUTF8(field.GetName());
+
+			if (field.IsString())
+				fieldData["value"] = ToUTF8(m_stringValues[field.Index()]);
+			else
+				fieldData["value"] = m_intValues[field.Index()];
+
+			j["data"].push_back(fieldData);
+		}
 
 		return j;
 	}
@@ -188,14 +195,32 @@ public:
 		if (!j.contains("name"))
 			throw WolfRPGException(ERROR_TAG L"Data 'name' not found in patch");
 
-		if (!j.contains("stringValues"))
-			throw WolfRPGException(ERROR_TAG L"Data 'stringValues' not found in patch");
+		if (!j.contains("data"))
+			throw WolfRPGException(ERROR_TAG L"Data 'data' not found in patch");
 
-		m_name = ToUTF16(j["name"].get<std::string>());
+		if (m_stringValues.empty() && m_intValues.empty()) return;
 
-		m_stringValues.clear();
-		for (const auto& stringArg : j["stringValues"])
-			m_stringValues.push_back(ToUTF16(stringArg.get<std::string>()));
+		for (std::size_t i = 0; i < m_fields.size(); i++)
+		{
+			const nlohmann::ordered_json& fieldData = j["data"][i];
+
+			const Field& field    = m_fields[i];
+			std::string fieldName = ToUTF8(field.GetName());
+
+			if (!fieldData.contains("name"))
+				throw WolfRPGException(ERROR_TAG L"Data field 'name' not found in patch");
+
+			if (!fieldData.contains("value"))
+				throw WolfRPGException(ERROR_TAG L"Data field 'value' not found in patch");
+
+			if (fieldName != fieldData["name"])
+				throw WolfRPGException(ERROR_TAG L"Data field name mismatch");
+
+			if (field.IsString())
+				m_stringValues[field.Index()] = ToUTF16(fieldData["value"].get<std::string>());
+			else
+				m_intValues[field.Index()] = fieldData["value"].get<uint32_t>();
+		}
 	}
 
 	void ReadDat(FileCoder& coder, Fields& fields, const uint32_t& fieldsSize)
@@ -226,20 +251,6 @@ public:
 
 		for (const tString& str : m_stringValues)
 			coder.WriteString(str);
-	}
-
-	TranslatableEntities GetTranslatableFields() const
-	{
-		TranslatableEntities te;
-		for (const Field& field : m_fields)
-		{
-			if (field.IsString() && field.GetType() == 0)
-			{
-				te.push_back(TranslatableEntity{ field, m_stringValues.at(field.Index()) });
-			}
-		}
-
-		return te;
 	}
 
 	const tString& GetName() const
@@ -562,7 +573,7 @@ private:
 
 		FileCoder coder(datFileName, FileCoder::Mode::READ, true, DAT_SEED_INDICES);
 		if (coder.IsEncrypted())
-			m_cryptHeader       = coder.GetCryptHeader();
+			m_cryptHeader = coder.GetCryptHeader();
 		else
 			VERIFY_MAGIC(coder, DAT_MAGIC_NUMBER)
 
@@ -596,8 +607,8 @@ private:
 	}
 
 private:
-	Types m_types               = {};
-	Bytes m_cryptHeader         = {};
+	Types m_types       = {};
+	Bytes m_cryptHeader = {};
 
 	BYTE m_startEndIndicator = 0;
 	bool m_valid             = false;
