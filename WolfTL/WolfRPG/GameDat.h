@@ -21,7 +21,7 @@ public:
 		if (m_fileName.empty())
 			throw WolfRPGException(ERROR_TAG "Trying to load with empty filename");
 
-		FileCoder coder(fileName, FileCoder::Mode::READ, SEED_INDICES);
+		FileCoder coder(fileName, FileCoder::Mode::READ, false, SEED_INDICES);
 		if (coder.IsEncrypted())
 			m_cryptHeader = coder.GetCryptHeader();
 		else
@@ -78,10 +78,9 @@ public:
 	void Dump(const tString& outputDir) const
 	{
 		tString outputFN = outputDir + L"/" + GetFileName(m_fileName);
-		FileCoder coder(outputFN, FileCoder::Mode::WRITE, SEED_INDICES, m_cryptHeader);
+		FileCoder coder(outputFN, FileCoder::Mode::WRITE, false, SEED_INDICES);
 
-		if (m_cryptHeader.empty())
-			coder.Write(MAGIC_NUMBER);
+		coder.Write(MAGIC_NUMBER);
 
 		coder.WriteByteArray(m_unknown1);
 		coder.WriteInt(m_fileVersion);

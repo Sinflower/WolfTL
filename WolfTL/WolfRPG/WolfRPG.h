@@ -51,9 +51,9 @@ public:
 		checkAndCreateDir(basicDataDir);
 		checkAndCreateDir(mapDataDir);
 
-		std::cout << "Writing Game.dat to file ... ";
-		m_gameDat.Dump(basicDataDir);
-		std::cout << "Done" << std::endl;
+		//std::cout << "Writing Game.dat to file ... ";
+		//m_gameDat.Dump(basicDataDir);
+		//std::cout << "Done" << std::endl;
 
 		std::cout << "Writing CommonEvents to file ... ";
 		m_commonEvents.Dump(basicDataDir);

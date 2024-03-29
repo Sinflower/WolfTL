@@ -96,6 +96,7 @@ public:
 	{
 		close();
 
+		m_offset  = 0;
 		m_dataVec = dataVec;
 		m_pData   = m_dataVec.data();
 		m_size    = static_cast<DWORD>(m_dataVec.size());
@@ -300,6 +301,8 @@ private:
 			CloseHandle(m_pFile);
 			m_pFile = nullptr;
 		}
+
+		m_offset = 0;
 	}
 
 	template<typename T>

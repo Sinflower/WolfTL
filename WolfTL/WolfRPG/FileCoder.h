@@ -6,7 +6,11 @@
 #include "WolfRPGUtils.h"
 
 #include <array>
+#include <filesystem>
 #include <iostream>
+#include <string>
+
+namespace fs = std::filesystem;
 
 class MagicNumber
 {
@@ -77,36 +81,72 @@ public:
 	// Disable Copy/Move constructor
 	DISABLE_COPY_MOVE(FileCoder)
 
-	FileCoder(const tString& fileName, const Mode mode, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
+	FileCoder(const tString& fileName, const Mode& mode, const bool& isDB = false, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
 		m_cryptHeader(cryptHeader),
 		m_mode(mode)
 	{
+		bool isProject = false;
+
+		// If the file extension is .project change the flag
+		if (fs::path(fileName).extension() == ".project")
+			isProject = true;
+
 		if (mode == Mode::READ)
 		{
 			m_reader.Open(fileName);
 
-			if (seedIndices.empty()) return;
+			if (!isProject)
+			{
+				if (seedIndices.empty()) return;
 
-			uint8_t indicator = ReadByte();
+				uint8_t indicator = ReadByte();
 
-			if (indicator == 0x0) return;
+				if (isDB)
+				{
+					if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
+						return;
+				}
+				else
+				{
+					if (indicator == 0x0)
+						return;
+				}
 
-			Bytes header(CRYPT_HEADER_SIZE);
-			header[0] = indicator;
+				Bytes header(CRYPT_HEADER_SIZE);
+				header[0] = indicator;
 
-			for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
-				header[i] = ReadByte();
+				for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
+					header[i] = ReadByte();
 
-			Bytes seeds;
-			for (size_t i = 0; i < seedIndices.size(); i++)
-				seeds.push_back(header[seedIndices[i]]);
+				Bytes seeds;
+				for (size_t i = 0; i < seedIndices.size(); i++)
+					seeds.push_back(header[seedIndices[i]]);
 
-			m_cryptHeader = header;
+				m_cryptHeader = header;
 
-			Bytes data = Read();
-			crypt(data, seeds);
-			// TODO: In order for reading from encrypted files to work more stuff is required
-			// the unencrypted data should be inside "data" needs to be made accesible somehow
+				Bytes data = Read();
+				cryptDat(data, seeds);
+
+				s_isUTF8 = true;
+
+				m_reader.InitData(data);
+				m_reader.Skip(5);
+				uint32_t keySize = m_reader.ReadUInt32();
+				int8_t projKey   = m_reader.ReadInt8();
+
+				if (s_projKey == -1)
+					s_projKey = projKey;
+
+				m_reader.Skip(keySize - 1);
+			}
+			else if (s_projKey != -1)
+			{
+				Bytes data = Read();
+
+				cryptProj(data);
+
+				m_reader.InitData(data);
+			}
 		}
 		else if (mode == Mode::WRITE)
 		{
@@ -335,17 +375,23 @@ public:
 	}
 
 private:
-	void crypt(Bytes& data, const Bytes& seeds)
+	void cryptDat(Bytes& data, const Bytes& seeds)
 	{
-		for (size_t i = 0; i < seeds.size(); i++)
+		for (std::size_t i = 0; i < seeds.size(); i++)
 		{
-			unsigned int seed = seeds.at(i);
-			for (size_t j = 0; j < data.size(); j += DECRYPT_INTERVALS[i])
-			{
-				seed = (seed * 0x343FD + 0x269EC3) & 0xFFFFFFFF;
-				data[j] ^= (seed >> 28) & 7;
-			}
+			srand(seeds[i]);
+
+			for (std::size_t j = 0; j < data.size(); j += DECRYPT_INTERVALS[i])
+				data[j] ^= static_cast<uint8_t>(rand() >> 12);
 		}
+	}
+
+	void cryptProj(Bytes& data)
+	{
+		srand(s_projKey);
+
+		for (uint8_t& byte : data)
+			byte ^= static_cast<uint8_t>(rand());
 	}
 
 	const tString sjis2utf8(const Bytes& sjis)
@@ -379,6 +425,8 @@ private:
 	FileWriter m_writer = {};
 
 	static bool s_isUTF8;
+	static uint32_t s_projKey;
 };
 
-bool FileCoder::s_isUTF8 = false;
+bool FileCoder::s_isUTF8      = false;
+uint32_t FileCoder::s_projKey = -1;

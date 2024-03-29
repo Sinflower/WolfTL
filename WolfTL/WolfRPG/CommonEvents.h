@@ -286,7 +286,7 @@ public:
 	void Dump(const tString& outputDir) const
 	{
 		tString outputFN = outputDir + L"/" + GetFileName(m_fileName);
-		FileCoder coder(outputFN, FileCoder::Mode::WRITE, DAT_SEED_INDICES);
+		FileCoder coder(outputFN, FileCoder::Mode::WRITE, false, DAT_SEED_INDICES);
 
 		coder.Write(MAGIC_NUMBER);
 
@@ -347,8 +347,10 @@ public:
 private:
 	bool init(const tString& fileName)
 	{
-		FileCoder coder(fileName, FileCoder::Mode::READ, DAT_SEED_INDICES);
-		VERIFY_MAGIC(coder, MAGIC_NUMBER);
+		FileCoder coder(fileName, FileCoder::Mode::READ, false, DAT_SEED_INDICES);
+		if (!coder.IsEncrypted())
+			VERIFY_MAGIC(coder, MAGIC_NUMBER);
+
 		m_startIndicator  = coder.ReadByte();
 		uint32_t eventCnt = coder.ReadInt();
 		m_events          = CommonEvent::CommonEvents(eventCnt);
