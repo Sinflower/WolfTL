@@ -18,6 +18,11 @@ namespace fs = std::filesystem;
 #define VERIFY_MAGIC(CODER, MAGIC) \
 	if (!CODER.Verify(MAGIC)) throw WolfRPGException(ERROR_TAG "MAGIC invalid");
 
+namespace wolfRPGUtils
+{
+static bool g_skipBackup = false;
+}
+
 template<typename T>
 static inline std::string Dec2Hex(T i)
 {
@@ -62,6 +67,9 @@ static inline std::string ToUTF8(const std::wstring& utf16String)
 
 static inline void CreateBackup(const tString& file)
 {
+	// If the skip backup flag is set, do not create a backup
+	if (wolfRPGUtils::g_skipBackup) return;
+
 	// If the file does not exist, do not create a backup
 	if (!fs::exists(file)) return;
 

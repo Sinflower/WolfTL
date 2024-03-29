@@ -42,6 +42,9 @@ public:
 
 	void Patch(const bool& inplace = false)
 	{
+		// Skip backup if not patching in-place
+		wolfRPGUtils::g_skipBackup = !inplace;
+
 		if (!m_wolf.Valid())
 		{
 			std::wcerr << ERROR_TAG << L"WolfRPG initialization failed" << std::endl;
@@ -178,8 +181,8 @@ int main(int argc, char* argv[])
 	{
 		std::cout << "Usage: " << argv[0] << " <DATA-FOLDER> <OUTPUT-FOLDER> <MODE>" << std::endl;
 		std::cout << "Modes:" << std::endl;
-		std::cout << "  create - Create the Patch" << std::endl;
-		std::cout << "  patch  - Apply the Patch" << std::endl;
+		std::cout << "  create    - Create the Patch" << std::endl;
+		std::cout << "  patch     - Apply the Patch" << std::endl;
 		std::cout << "  patch_ip  - Apply the Patch in-place, i.e., override the original data files" << std::endl;
 		return 0;
 	}
