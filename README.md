@@ -1,6 +1,7 @@
 # WolfTL
 
-This is a simple tool for extracting translation-relevant data from WolfRPG `.dat` and `.mps` files and storing them in JSON files.
+This is a simple tool for extracting translation-relevant data from WolfRPG `.dat` and `.mps` files and storing them in JSON files.<BR>
+The data parsing code is based on [Wolf Trans](https://github.com/elizagamedev/wolftrans).
 
 ## Usage
 
