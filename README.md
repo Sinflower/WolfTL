@@ -11,7 +11,7 @@ WolfTL.exe <DATA-FOLDER> <OUTPUT-FOLDER> <MODE>
 
 Possible modes are:<br>
 `create`   - Create the Patch<br>
-`patch`    - Apply the Patch
+`patch`    - Apply the Patch<br>
 `patch_ip` - Apply the Patch in place, i.e., override the original data files
 
 After creating the Patch, the `OUTPUT-FOLDER` will contain a folder called `dump`, which contains folders for the three types (CommonEvents, Databases, and Maps).
