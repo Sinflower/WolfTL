@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
 		std::cout << "Modes:" << std::endl;
 		std::cout << "  create    - Create the Patch" << std::endl;
 		std::cout << "  patch     - Apply the Patch" << std::endl;
-		std::cout << "  patch_ip  - Apply the Patch in-place, i.e., override the original data files" << std::endl;
+		std::cout << "  patch_ip  - Apply the Patch in place, i.e., override the original data files" << std::endl;
 		return 0;
 	}
 
