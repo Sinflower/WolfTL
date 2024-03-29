@@ -8,20 +8,6 @@
 #include <array>
 #include <iostream>
 
-static const size_t CRYPT_HEADER_SIZE   = 10;
-static const size_t DECRYPT_INTERVALS[] = { 1, 2, 5 };
-
-namespace fileCoder
-{
-static bool g_isUTF8 = false;
-}
-
-enum class FileAccessMode
-{
-	READ,
-	WRITE
-};
-
 class MagicNumber
 {
 public:
@@ -77,15 +63,25 @@ private:
 
 class FileCoder
 {
+	static constexpr std::size_t CRYPT_HEADER_SIZE   = 10;
+	static constexpr std::size_t DECRYPT_INTERVALS[] = { 1, 2, 5 };
+
+public:
+	enum class Mode
+	{
+		READ,
+		WRITE
+	};
+
 public:
 	// Disable Copy/Move constructor
 	DISABLE_COPY_MOVE(FileCoder)
 
-	FileCoder(const tString& fileName, const FileAccessMode mode, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
+	FileCoder(const tString& fileName, const Mode mode, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
 		m_cryptHeader(cryptHeader),
 		m_mode(mode)
 	{
-		if (mode == FileAccessMode::READ)
+		if (mode == Mode::READ)
 		{
 			m_reader.Open(fileName);
 
@@ -112,7 +108,7 @@ public:
 			// TODO: In order for reading from encrypted files to work more stuff is required
 			// the unencrypted data should be inside "data" needs to be made accesible somehow
 		}
-		else if (mode == FileAccessMode::WRITE)
+		else if (mode == Mode::WRITE)
 		{
 			CreateBackup(fileName);
 			m_writer.Open(fileName);
@@ -145,7 +141,7 @@ public:
 
 	void Seek(const int32_t& pos)
 	{
-		if (m_mode == FileAccessMode::READ)
+		if (m_mode == Mode::READ)
 		{
 			DWORD o = m_reader.GetOffset() + pos;
 			m_reader.Seek(o);
@@ -154,7 +150,7 @@ public:
 
 	bool IsEof() const
 	{
-		if (m_mode == FileAccessMode::READ)
+		if (m_mode == Mode::READ)
 			return m_reader.IsEoF();
 
 		return false;
@@ -196,7 +192,7 @@ public:
 
 		Bytes data = Read(size);
 
-		if (fileCoder::g_isUTF8)
+		if (s_isUTF8)
 		{
 			std::string str = std::string(reinterpret_cast<const char*>(data.data()), data.size() - ((data.back() == 0x0) ? 1 : 0));
 			return ToUTF16(str);
@@ -252,7 +248,7 @@ public:
 		Bytes data = Read(magicNumber.Size());
 		if (magicNumber == data)
 		{
-			fileCoder::g_isUTF8 = magicNumber.IsUTF8(data);
+			s_isUTF8 = magicNumber.IsUTF8(data);
 			return true;
 		}
 
@@ -271,7 +267,7 @@ public:
 
 	void Write(const MagicNumber& mn)
 	{
-		if (fileCoder::g_isUTF8)
+		if (s_isUTF8)
 			Write(mn.GetUTF8Data());
 		else
 			Write(mn.GetData());
@@ -299,7 +295,7 @@ public:
 	{
 		Bytes str;
 
-		if (fileCoder::g_isUTF8)
+		if (s_isUTF8)
 		{
 			std::string s = ToUTF8(wstr);
 			str           = Bytes(s.begin(), s.end());
@@ -331,6 +327,11 @@ public:
 		WriteInt(static_cast<uint32_t>(strs.size()));
 		for (tString str : strs)
 			WriteString(str);
+	}
+
+	static bool IsUTF8()
+	{
+		return s_isUTF8;
 	}
 
 private:
@@ -372,8 +373,12 @@ private:
 
 private:
 	Bytes m_cryptHeader;
-	FileAccessMode m_mode;
+	Mode m_mode;
 
 	FileReader m_reader = {};
 	FileWriter m_writer = {};
+
+	static bool s_isUTF8;
 };
+
+bool FileCoder::s_isUTF8 = false;

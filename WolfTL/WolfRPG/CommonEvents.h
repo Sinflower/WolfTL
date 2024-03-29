@@ -286,7 +286,7 @@ public:
 	void Dump(const tString& outputDir) const
 	{
 		tString outputFN = outputDir + L"/" + GetFileName(m_fileName);
-		FileCoder coder(outputFN, FileAccessMode::WRITE, DAT_SEED_INDICES);
+		FileCoder coder(outputFN, FileCoder::Mode::WRITE, DAT_SEED_INDICES);
 
 		coder.Write(MAGIC_NUMBER);
 
@@ -347,7 +347,7 @@ public:
 private:
 	bool init(const tString& fileName)
 	{
-		FileCoder coder(fileName, FileAccessMode::READ, DAT_SEED_INDICES);
+		FileCoder coder(fileName, FileCoder::Mode::READ, DAT_SEED_INDICES);
 		VERIFY_MAGIC(coder, MAGIC_NUMBER);
 		m_startIndicator  = coder.ReadByte();
 		uint32_t eventCnt = coder.ReadInt();

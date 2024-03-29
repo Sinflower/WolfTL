@@ -384,7 +384,7 @@ public:
 		if (m_fileName.empty())
 			throw WolfRPGException(ERROR_TAG "Trying to load map with empty filename");
 
-		FileCoder coder(fileName, FileAccessMode::READ);
+		FileCoder coder(fileName, FileCoder::Mode::READ);
 		VERIFY_MAGIC(coder, MAGIC_NUMBER);
 
 		m_unknown1 = coder.ReadInt();
@@ -399,7 +399,7 @@ public:
 
 		bool readTiles = true;
 
-		if (fileCoder::g_isUTF8)
+		if (FileCoder::IsUTF8())
 		{
 			int32_t v = coder.ReadInt();
 			if (v == -1)
@@ -441,7 +441,7 @@ public:
 	void Dump(const tString& outputDir) const
 	{
 		tString outputFN = outputDir + L"/" + ::GetFileName(m_fileName);
-		FileCoder coder(outputFN, FileAccessMode::WRITE);
+		FileCoder coder(outputFN, FileCoder::Mode::WRITE);
 		coder.Write(MAGIC_NUMBER);
 
 		coder.WriteInt(m_unknown1);
@@ -453,7 +453,7 @@ public:
 		coder.WriteInt(m_height);
 		coder.WriteInt(static_cast<uint32_t>(m_events.size()));
 
-		if (fileCoder::g_isUTF8 && m_tiles.empty())
+		if (FileCoder::IsUTF8() && m_tiles.empty())
 			coder.WriteInt(0xFFFFFFFF);
 		else
 			coder.Write(m_tiles);

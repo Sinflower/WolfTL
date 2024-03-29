@@ -33,6 +33,8 @@
 #include <string>
 #include <vector>
 
+namespace fileAccessUtils
+{
 static inline std::wstring s2ws(const std::string& str)
 {
 	return std::wstring_convert<std::codecvt_utf8<wchar_t>>().from_bytes(str);
@@ -42,11 +44,7 @@ static inline std::string ws2s(const std::wstring& wstr)
 {
 	return std::wstring_convert<std::codecvt_utf8<wchar_t>>().to_bytes(wstr);
 }
-
-namespace fileAccess
-{
-static bool g_isUTF8 = true;
-}
+} // namespace fileAccessUtils
 
 class FileWalkerException : public std::exception
 {
@@ -55,7 +53,7 @@ public:
 		m_what(what) {}
 
 	explicit FileWalkerException(const std::wstring& what) :
-		m_what(ws2s(what)) {}
+		m_what(fileAccessUtils::ws2s(what)) {}
 
 	virtual ~FileWalkerException() noexcept {}
 
@@ -73,7 +71,7 @@ class FileReader
 public:
 	FileReader() {}
 	FileReader(const std::string& filename, const DWORD& startOffset = -1) :
-		FileReader(s2ws(filename), startOffset) {}
+		FileReader(fileAccessUtils::s2ws(filename), startOffset) {}
 
 	FileReader(const std::wstring& filename, const DWORD& startOffset = -1)
 	{
@@ -339,7 +337,7 @@ public:
 		m_what(what) {}
 
 	explicit FileWriterException(const std::wstring& what) :
-		m_what(ws2s(what)) {}
+		m_what(fileAccessUtils::ws2s(what)) {}
 
 	virtual ~FileWriterException() noexcept {}
 
@@ -357,7 +355,7 @@ class FileWriter
 public:
 	FileWriter() {}
 	FileWriter(const std::string& filename) :
-		FileWriter(s2ws(filename)) {}
+		FileWriter(fileAccessUtils::s2ws(filename)) {}
 
 	FileWriter(const std::wstring& filename)
 	{
@@ -402,7 +400,7 @@ public:
 
 	void WriteToFile(const std::string& filename)
 	{
-		WriteToFile(s2ws(filename));
+		WriteToFile(fileAccessUtils::s2ws(filename));
 	}
 
 	void WriteToFile(const std::wstring& filename)

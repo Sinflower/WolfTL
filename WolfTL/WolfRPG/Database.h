@@ -481,14 +481,14 @@ public:
 	{
 		{
 			tString outputFN = outputDir + L"/" + GetFileName(m_projectFileName);
-			FileCoder coder(outputFN, FileAccessMode::WRITE);
+			FileCoder coder(outputFN, FileCoder::Mode::WRITE);
 			coder.WriteInt(m_types.size());
 			for (const Type& type : m_types)
 				type.DumpProject(coder);
 		}
 
 		tString outputFN = outputDir + L"/" + GetFileName(m_datFileName);
-		FileCoder coder(outputFN, FileAccessMode::WRITE, DAT_SEED_INDICES, m_cryptHeader);
+		FileCoder coder(outputFN, FileCoder::Mode::WRITE, DAT_SEED_INDICES, m_cryptHeader);
 		if (coder.IsEncrypted())
 			coder.WriteByte(m_unknownEncrypted1);
 		else
@@ -554,7 +554,7 @@ private:
 	bool init(const tString& projectFileName, const tString& datFileName)
 	{
 		{
-			FileCoder coder(projectFileName, FileAccessMode::READ);
+			FileCoder coder(projectFileName, FileCoder::Mode::READ);
 			uint32_t typeCnt = coder.ReadInt();
 			for (uint32_t i = 0; i < typeCnt; i++)
 				m_types.push_back(Type(coder));
@@ -563,7 +563,7 @@ private:
 				throw WolfRPGException(ERROR_TAG L"Database [" + projectFileName + L"] has more data than expected");
 		}
 
-		FileCoder coder(datFileName, FileAccessMode::READ, DAT_SEED_INDICES);
+		FileCoder coder(datFileName, FileCoder::Mode::READ, DAT_SEED_INDICES);
 		if (coder.IsEncrypted())
 		{
 			m_cryptHeader       = coder.GetCryptHeader();
