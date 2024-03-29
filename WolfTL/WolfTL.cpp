@@ -10,6 +10,8 @@
 
 namespace fs = std::filesystem;
 
+static const std::string VERSION = "0.2.0";
+
 class WolfTL
 {
 	inline static const tString MAP_OUTPUT   = TEXT("dump/mps/");
@@ -170,6 +172,8 @@ private:
 
 int main(int argc, char* argv[])
 {
+	std::cout << "WolfTL v" << VERSION << std::endl;
+
 	if (argc < 4)
 	{
 		std::cout << "Usage: " << argv[0] << " <DATA-FOLDER> <OUTPUT-FOLDER> <MODE>" << std::endl;
