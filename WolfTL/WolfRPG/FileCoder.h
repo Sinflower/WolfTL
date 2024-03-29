@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FileAccess.h"
 #include "Types.h"
 #include "WolfRPGException.h"
 #include "WolfRPGUtils.h"
@@ -15,10 +16,7 @@ namespace fileCoder
 static bool g_isUTF8 = false;
 }
 
-#define CHECK_FILE_OPEN \
-	if (m_pFile == nullptr) throw WolfRPGException(ERROR_TAG "Trying to read from unopened file.");
-
-enum MODE
+enum class FileAccessMode
 {
 	READ,
 	WRITE
@@ -83,22 +81,14 @@ public:
 	// Disable Copy/Move constructor
 	DISABLE_COPY_MOVE(FileCoder)
 
-	FileCoder(const tString& fileName, const MODE mode, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
-		m_fileName(fileName),
-		m_cryptHeader(cryptHeader)
+	FileCoder(const tString& fileName, const FileAccessMode mode, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
+		m_cryptHeader(cryptHeader),
+		m_mode(mode)
 	{
-		if (mode == WRITE)
-			CreateBackup(fileName);
-
-		_wfopen_s(&m_pFile, fileName.c_str(), (mode == READ ? L"rb" : L"wb"));
-
-		if (m_pFile == nullptr)
-			throw WolfRPGException(ERROR_TAG L"Unable to open file: " + fileName);
-
-		m_size = fs::file_size(fileName);
-
-		if (mode == READ)
+		if (mode == FileAccessMode::READ)
 		{
+			m_reader.Open(fileName);
+
 			if (seedIndices.empty()) return;
 
 			uint8_t indicator = ReadByte();
@@ -122,8 +112,11 @@ public:
 			// TODO: In order for reading from encrypted files to work more stuff is required
 			// the unencrypted data should be inside "data" needs to be made accesible somehow
 		}
-		else if (mode == WRITE)
+		else if (mode == FileAccessMode::WRITE)
 		{
+			CreateBackup(fileName);
+			m_writer.Open(fileName);
+
 			if (!seedIndices.empty() && !cryptHeader.empty())
 			{
 				Write(cryptHeader);
@@ -138,7 +131,6 @@ public:
 
 	~FileCoder()
 	{
-		fclose(m_pFile);
 	}
 
 	const Bytes& GetCryptHeader() const
@@ -153,82 +145,57 @@ public:
 
 	void Seek(const int32_t& pos)
 	{
-		CHECK_FILE_OPEN;
-		fseek(m_pFile, pos, SEEK_CUR);
-	}
-
-	uint32_t Tell() const
-	{
-		if (m_pFile == nullptr)
-			return static_cast<uint32_t>(-1);
-
-		if (IsEncrypted())
-			return ftell(m_pFile) + CRYPT_HEADER_SIZE;
-		else
-			return ftell(m_pFile);
+		if (m_mode == FileAccessMode::READ)
+		{
+			DWORD o = m_reader.GetOffset() + pos;
+			m_reader.Seek(o);
+		}
 	}
 
 	bool IsEof() const
 	{
-		return (feof(m_pFile) == 0);
+		if (m_mode == FileAccessMode::READ)
+			return m_reader.IsEoF();
+
+		return false;
 	}
 
 	Bytes Read(const size_t& size = -1)
 	{
 		Bytes data;
 
-		CHECK_FILE_OPEN;
-
 		if (size != -1)
-		{
 			data.resize(size);
-			fread(data.data(), sizeof(uint8_t), size, m_pFile);
-		}
 		else
 		{
-			long curPos = ftell(m_pFile);
-			fseek(m_pFile, 0, SEEK_END);
-			long endPos = ftell(m_pFile);
-			fseek(m_pFile, curPos, SEEK_SET);
-
-			long remainingSize = endPos - curPos;
+			DWORD remainingSize = m_reader.GetSize() - m_reader.GetOffset();
 			data.resize(remainingSize);
-
-			fread(data.data(), sizeof(uint8_t), remainingSize, m_pFile);
 		}
+
+		m_reader.ReadBytesVec(data);
 
 		return data;
 	}
 
 	uint8_t ReadByte()
 	{
-		CHECK_FILE_OPEN;
-
-		uint8_t byte;
-		fread(&byte, sizeof(uint8_t), 1, m_pFile);
-
-		return byte;
+		return m_reader.ReadUInt8();
 	}
 
 	uint32_t ReadInt()
 	{
-		CHECK_FILE_OPEN;
-
-		uint32_t data;
-		fread(&data, sizeof(uint32_t), 1, m_pFile);
-
-		return data;
+		return m_reader.ReadUInt32();
 	}
 
 	tString ReadString()
 	{
-		CHECK_FILE_OPEN;
-
 		uint32_t size = ReadInt();
+
 		if (size == 0)
 			throw WolfRPGException(ERROR_TAG "Zero length string encountered.");
 
 		Bytes data = Read(size);
+
 		if (fileCoder::g_isUTF8)
 		{
 			std::string str = std::string(reinterpret_cast<const char*>(data.data()), data.size() - ((data.back() == 0x0) ? 1 : 0));
@@ -292,17 +259,14 @@ public:
 		return false;
 	}
 
-	void Skip(const long& size)
+	void Skip(const DWORD& size)
 	{
-		CHECK_FILE_OPEN;
-		fseek(m_pFile, size, SEEK_CUR);
+		m_reader.Skip(size);
 	}
 
 	void Write(const Bytes& data)
 	{
-		CHECK_FILE_OPEN;
-
-		fwrite(data.data(), sizeof(uint8_t), data.size(), m_pFile);
+		m_writer.WriteBytesVec(data);
 	}
 
 	void Write(const MagicNumber& mn)
@@ -315,9 +279,7 @@ public:
 
 	void WriteByte(const uint8_t& data)
 	{
-		CHECK_FILE_OPEN;
-
-		fwrite(&data, sizeof(uint8_t), 1, m_pFile);
+		m_writer.Write(data);
 	}
 
 #ifdef BIT_64
@@ -330,15 +292,11 @@ public:
 
 	void WriteInt(const uint32_t& data)
 	{
-		CHECK_FILE_OPEN;
-
-		fwrite(&data, sizeof(uint32_t), 1, m_pFile);
+		m_writer.Write(data);
 	}
 
 	void WriteString(const tString& wstr)
 	{
-		CHECK_FILE_OPEN;
-
 		Bytes str;
 
 		if (fileCoder::g_isUTF8)
@@ -356,8 +314,6 @@ public:
 
 	void WriteByteArray(const Bytes& data)
 	{
-		CHECK_FILE_OPEN;
-
 		WriteInt(static_cast<uint32_t>(data.size()));
 		for (uint8_t byte : data)
 			WriteByte(byte);
@@ -365,8 +321,6 @@ public:
 
 	void WriteIntArray(const uInts& data)
 	{
-		CHECK_FILE_OPEN;
-
 		WriteInt(static_cast<uint32_t>(data.size()));
 		for (uint32_t uint : data)
 			WriteInt(uint);
@@ -374,8 +328,6 @@ public:
 
 	void WriteStringArray(const tStrings& strs)
 	{
-		CHECK_FILE_OPEN;
-
 		WriteInt(static_cast<uint32_t>(strs.size()));
 		for (tString str : strs)
 			WriteString(str);
@@ -419,8 +371,9 @@ private:
 	}
 
 private:
-	tString m_fileName;
-	FILE* m_pFile = nullptr;
 	Bytes m_cryptHeader;
-	std::uintmax_t m_size = 0;
+	FileAccessMode m_mode;
+
+	FileReader m_reader = {};
+	FileWriter m_writer = {};
 };

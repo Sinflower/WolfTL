@@ -384,7 +384,7 @@ public:
 		if (m_fileName.empty())
 			throw WolfRPGException(ERROR_TAG "Trying to load map with empty filename");
 
-		FileCoder coder(fileName, READ);
+		FileCoder coder(fileName, FileAccessMode::READ);
 		VERIFY_MAGIC(coder, MAGIC_NUMBER);
 
 		m_unknown1 = coder.ReadInt();
@@ -441,7 +441,7 @@ public:
 	void Dump(const tString& outputDir) const
 	{
 		tString outputFN = outputDir + L"/" + ::GetFileName(m_fileName);
-		FileCoder coder(outputFN, WRITE);
+		FileCoder coder(outputFN, FileAccessMode::WRITE);
 		coder.Write(MAGIC_NUMBER);
 
 		coder.WriteInt(m_unknown1);

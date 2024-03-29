@@ -6,48 +6,9 @@
 #include <iostream>
 #include <map>
 
-#include "Context.h"
 #include "WolfRPG\WolfRPG.h"
 
 namespace fs = std::filesystem;
-
-class Translation
-{
-public:
-	Translation(const tString& patchFileName = L"", const tString& string = L"", const bool autogenerate = true) :
-		m_patchFileName(patchFileName),
-		m_string(string),
-		m_autogenerate(autogenerate)
-	{
-	}
-
-	const tString& to_s() const
-	{
-		return m_string;
-	}
-
-	const tString& getPatchFileName() const
-	{
-		return m_patchFileName;
-	}
-
-	const bool& isAutoGenereate() const
-	{
-		return m_autogenerate;
-	}
-
-private:
-	tString m_patchFileName;
-	tString m_string;
-	bool m_autogenerate;
-};
-
-using Translations = std::vector<Translation>;
-
-using StringPair = std::pair<tString, ContextsShPtr::Context>;
-
-// Different @strings layout:
-// One String associated with n Context|Translation combos
 
 class WolfTL
 {
@@ -254,4 +215,6 @@ int main(int argc, char* argv[])
 	{
 		std::cerr << e.what() << std::endl;
 	}
+
+	return 0;
 }

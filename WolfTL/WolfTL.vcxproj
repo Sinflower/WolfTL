@@ -147,6 +147,7 @@
     <ClInclude Include="WolfRPG\CommonEvents.h" />
     <ClInclude Include="WolfRPG\Database.h" />
     <ClInclude Include="WolfRPG\FileCoder.h" />
+    <ClInclude Include="WolfRPG\FileAccess.h" />
     <ClInclude Include="WolfRPG\GameDat.h" />
     <ClInclude Include="WolfRPG\Map.h" />
     <ClInclude Include="WolfRPG\RouteCommand.h" />

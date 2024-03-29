@@ -62,5 +62,8 @@
     <ClInclude Include="3rdParty\nlohmann\json.hpp">
       <Filter>3rdParty</Filter>
     </ClInclude>
+    <ClInclude Include="WolfRPG\FileAccess.h">
+      <Filter>WolfRPG</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
