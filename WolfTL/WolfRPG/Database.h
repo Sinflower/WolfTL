@@ -41,10 +41,10 @@ public:
 		if (!j.contains("name"))
 			throw WolfRPGException(ERROR_TAG L"Field 'name' not found in patch");
 
+		m_name = ToUTF16(j["name"].get<std::string>());
+
 		if (j.contains("stringArgs"))
 		{
-			m_name = ToUTF16(j["name"].get<std::string>());
-
 			m_stringArgs.clear();
 			for (const auto& stringArg : j["stringArgs"])
 				m_stringArgs.push_back(ToUTF16(stringArg.get<std::string>()));
@@ -213,8 +213,8 @@ public:
 			if (!fieldData.contains("value"))
 				throw WolfRPGException(ERROR_TAG L"Data field 'value' not found in patch");
 
-			if (fieldName != fieldData["name"])
-				throw WolfRPGException(ERROR_TAG L"Data field name mismatch");
+			//if (fieldName != fieldData["name"])
+			//	throw WolfRPGException(ERROR_TAG L"Data field name mismatch");
 
 			if (field.IsString())
 				m_stringValues[field.Index()] = ToUTF16(fieldData["value"].get<std::string>());
