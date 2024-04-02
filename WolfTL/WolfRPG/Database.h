@@ -174,7 +174,7 @@ public:
 		if (m_stringValues.empty() && m_intValues.empty())
 			return j;
 
-		for (const Field& field : m_fields)
+		for (const Field& field : *m_pFields)
 		{
 			nlohmann::ordered_json fieldData;
 			fieldData["name"] = ToUTF8(field.GetName());
@@ -200,11 +200,11 @@ public:
 
 		if (m_stringValues.empty() && m_intValues.empty()) return;
 
-		for (std::size_t i = 0; i < m_fields.size(); i++)
+		for (std::size_t i = 0; i < m_pFields->size(); i++)
 		{
 			const nlohmann::ordered_json& fieldData = j["data"][i];
 
-			const Field& field    = m_fields[i];
+			const Field& field    = m_pFields->at(i);
 			std::string fieldName = ToUTF8(field.GetName());
 
 			if (!fieldData.contains("name"))
@@ -213,8 +213,8 @@ public:
 			if (!fieldData.contains("value"))
 				throw WolfRPGException(ERROR_TAG L"Data field 'value' not found in patch");
 
-			//if (fieldName != fieldData["name"])
-			//	throw WolfRPGException(ERROR_TAG L"Data field name mismatch");
+			if (fieldName != fieldData["name"])
+				throw WolfRPGException(ERROR_TAG L"Data field name mismatch");
 
 			if (field.IsString())
 				m_stringValues[field.Index()] = ToUTF16(fieldData["value"].get<std::string>());
@@ -225,7 +225,7 @@ public:
 
 	void ReadDat(FileCoder& coder, Fields& fields, const uint32_t& fieldsSize)
 	{
-		m_fields        = fields;
+		m_pFields       = &fields;
 		uint32_t intCnt = 0;
 		uint32_t strCnt = 0;
 
@@ -263,7 +263,7 @@ private:
 	tString m_name          = TEXT("");
 	uInts m_intValues       = {};
 	tStrings m_stringValues = {};
-	Fields m_fields         = {};
+	Fields* m_pFields       = nullptr;
 };
 
 using Datas = std::vector<Data>;
@@ -374,13 +374,8 @@ public:
 		m_unknown1   = coder.ReadInt();
 		m_fieldsSize = coder.ReadInt();
 
-		// if (m_fields.size() > fieldsSize)
-		//	m_fields.resize(fieldsSize);
-
 		for (uint32_t i = 0; i < m_fieldsSize; i++)
 			m_fields[i].ReadDat(coder);
-		// for (Field& field : m_fields)
-		//	field.readDat(coder);
 
 		uint32_t dataSize = coder.ReadInt();
 
