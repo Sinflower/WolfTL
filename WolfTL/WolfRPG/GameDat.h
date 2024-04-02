@@ -19,7 +19,7 @@ public:
 		m_fileName = fileName;
 
 		if (m_fileName.empty())
-			throw WolfRPGException(ERROR_TAG "Trying to load with empty filename");
+			throw WolfRPGException(ERROR_TAG + "Trying to load with empty filename");
 
 		FileCoder coder(fileName, FileCoder::Mode::READ, false, SEED_INDICES);
 		if (coder.IsEncrypted())
@@ -35,7 +35,7 @@ public:
 		m_magicString = coder.ReadString();
 
 		if (m_magicString != MAGIC_STRING)
-			throw WolfRPGException(ERROR_TAG L"Invalid magic string: \"" + m_magicString + L"\" expected: \"" + MAGIC_STRING + L"\"");
+			throw WolfRPGException(ERROR_TAGW + L"Invalid magic string: \"" + m_magicString + L"\" expected: \"" + MAGIC_STRING + L"\"");
 
 		m_unknown2 = coder.ReadByteArray();
 		m_font     = coder.ReadString();
@@ -55,7 +55,7 @@ public:
 		m_unknown4 = coder.Read();
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAG L"GameDat has more data than expected");
+			throw WolfRPGException(ERROR_TAGW + L"GameDat has more data than expected");
 
 		return true;
 	}

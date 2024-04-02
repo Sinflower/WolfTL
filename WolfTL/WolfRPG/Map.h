@@ -37,7 +37,7 @@ public:
 		{
 			RouteCommand rc;
 			if (!rc.Init(coder))
-				throw WolfRPGException(ERROR_TAG "RouteCommand initialization failed");
+				throw WolfRPGException(ERROR_TAG + "RouteCommand initialization failed");
 
 			m_route.push_back(rc);
 		}
@@ -47,7 +47,7 @@ public:
 		{
 			Command::CommandShPtr::Command command = Command::Command::Init(coder);
 			if (!command->Valid())
-				throw WolfRPGException(ERROR_TAG "Command initialization failed");
+				throw WolfRPGException(ERROR_TAG + "Command initialization failed");
 
 			m_commands.push_back(command);
 		}
@@ -60,7 +60,7 @@ public:
 
 		uint8_t terminator = coder.ReadByte();
 		if (terminator != 0x7A)
-			throw WolfRPGException(ERROR_TAG "Page terminator not 0x7A (found: 0x" + Dec2Hex(terminator) + ")");
+			throw WolfRPGException(ERROR_TAG + "Page terminator not 0x7A (found: 0x" + Dec2Hex(terminator) + ")");
 
 		return true;
 	}
@@ -112,25 +112,24 @@ public:
 
 	void Patch(const nlohmann::ordered_json& j)
 	{
-		if (!j.contains("list"))
-			throw WolfRPGException(ERROR_TAG "Missing 'list' key in Page JSON");
-
-		if (!j.contains("id"))
-			throw WolfRPGException(ERROR_TAG "Missing 'id' key in Page JSON");
+		CHECK_JSON_KEY(j, "list", "pages");
+		CHECK_JSON_KEY(j, "id", "pages");
 
 		const uint32_t id = j["id"].get<uint32_t>();
 
 		if (id != m_id)
-			throw WolfRPGException(ERROR_TAG "Page ID mismatch: " + std::to_string(m_id) + " != " + std::to_string(id));
+			throw WolfRPGException(ERROR_TAG + "Page ID mismatch: " + std::to_string(m_id) + " != " + std::to_string(id));
+
+		uint32_t cmdIdx = 0;
 
 		for (const auto& cmdJ : j["list"])
 		{
-			if (!cmdJ.contains("index"))
-				throw WolfRPGException(ERROR_TAG "Missing 'index' key in Page JSON");
+			CHECK_JSON_KEY(cmdJ, "index", std::format("pages::list[{}]", cmdIdx));
+			cmdIdx++;
 
 			const uint32_t index = cmdJ["index"].get<uint32_t>();
 			if (index >= m_commands.size())
-				throw WolfRPGException(ERROR_TAG "Index out of range: " + std::to_string(index) + " >= " + std::to_string(m_commands.size()));
+				throw WolfRPGException(ERROR_TAG + "Index out of range: " + std::to_string(index) + " >= " + std::to_string(m_commands.size()));
 
 			m_commands[index]->Patch(cmdJ);
 		}
@@ -257,17 +256,17 @@ public:
 		{
 			Page page;
 			if (!page.Init(coder, pageID))
-				throw WolfRPGException(ERROR_TAG "Page initialization failed");
+				throw WolfRPGException(ERROR_TAG + "Page initialization failed");
 
 			m_pages.push_back(page);
 			pageID++;
 		}
 
 		if (m_pages.size() != pageCount)
-			throw WolfRPGException(ERROR_TAG "Expected " + std::to_string(pageCount) + " Pages, but read: " + std::to_string(m_pages.size()) + " Pages");
+			throw WolfRPGException(ERROR_TAG + "Expected " + std::to_string(pageCount) + " Pages, but read: " + std::to_string(m_pages.size()) + " Pages");
 
 		if (indicator != 0x70)
-			throw WolfRPGException(ERROR_TAG "Unexpected event indicator: " + Dec2Hex(indicator) + " expected 0x70");
+			throw WolfRPGException(ERROR_TAG + "Unexpected event indicator: " + Dec2Hex(indicator) + " expected 0x70");
 
 		m_valid = true;
 
@@ -308,16 +307,13 @@ public:
 
 	void Patch(const nlohmann::ordered_json& j)
 	{
-		if (!j.contains("pages"))
-			throw WolfRPGException(ERROR_TAG "Missing 'pages' key in Event JSON");
-
-		if (!j.contains("id"))
-			throw WolfRPGException(ERROR_TAG "Missing 'id' key in Event JSON");
+		CHECK_JSON_KEY(j, "pages", "events");
+		CHECK_JSON_KEY(j, "id", "events");
 
 		const uint32_t id = j["id"].get<uint32_t>();
 
 		if (id != m_id)
-			throw WolfRPGException(ERROR_TAG "Event ID mismatch: " + std::to_string(m_id) + " != " + std::to_string(id));
+			throw WolfRPGException(ERROR_TAG + "Event ID mismatch: " + std::to_string(m_id) + " != " + std::to_string(id));
 
 		for (std::size_t i = 0; i < m_pages.size(); i++)
 			m_pages[i].Patch(j["pages"][i]);
@@ -382,7 +378,7 @@ public:
 		m_fileName = fileName;
 
 		if (m_fileName.empty())
-			throw WolfRPGException(ERROR_TAG "Trying to load map with empty filename");
+			throw WolfRPGException(ERROR_TAG + "Trying to load map with empty filename");
 
 		FileCoder coder(fileName, FileCoder::Mode::READ);
 		VERIFY_MAGIC(coder, MAGIC_NUMBER);
@@ -416,19 +412,19 @@ public:
 		{
 			Event ev;
 			if (!ev.Init(coder))
-				throw WolfRPGException(ERROR_TAG "Event initialization failed");
+				throw WolfRPGException(ERROR_TAG + "Event initialization failed");
 
 			m_events.push_back(ev);
 		}
 
 		if (m_events.size() != eventCount)
-			throw WolfRPGException(ERROR_TAG "Expected " + std::to_string(eventCount) + " Events, but read: " + std::to_string(m_events.size()) + " Events");
+			throw WolfRPGException(ERROR_TAG + "Expected " + std::to_string(eventCount) + " Events, but read: " + std::to_string(m_events.size()) + " Events");
 
 		if (indicator != 0x66)
-			throw WolfRPGException(ERROR_TAG "Unexpected event indicator: " + Dec2Hex(indicator) + " expected 0x66");
+			throw WolfRPGException(ERROR_TAG + "Unexpected event indicator: " + Dec2Hex(indicator) + " expected 0x66");
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAG L"Map [" + fileName + L"] has more data than expected");
+			throw WolfRPGException(ERROR_TAGW + L"Map [" + fileName + L"] has more data than expected");
 
 		return true;
 	}
@@ -486,7 +482,7 @@ public:
 	{
 		const tString patchFile = patchFolder + L"/" + ::GetFileNameNoExt(m_fileName) + L".json";
 		if (!fs::exists(patchFile))
-			throw WolfRPGException(ERROR_TAG L"Patch file not found: " + patchFile);
+			throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFile);
 
 		nlohmann::ordered_json j;
 		std::ifstream in(patchFile);

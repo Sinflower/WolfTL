@@ -109,33 +109,30 @@ public:
 
 	void Patch(const nlohmann::ordered_json& j)
 	{
-		if (!j.contains("id"))
-			throw WolfRPGException(ERROR_TAG "Field 'id' not found in patch");
+		CHECK_JSON_KEY(j, "id", "CommonEvent");
 
 		const uint32_t id = j["id"].get<uint32_t>();
+
 		if (id != m_id)
-			throw WolfRPGException(ERROR_TAG "ID mismatch in patch (expected " + std::to_string(m_id) + ", got " + std::to_string(id) + ")");
+			throw WolfRPGException(ERROR_TAG + "ID mismatch in patch (expected " + std::to_string(m_id) + ", got " + std::to_string(id) + ")");
 
-		if (!j.contains("name"))
-			throw WolfRPGException(ERROR_TAG "Field 'name' not found in patch");
-
-		if (!j.contains("description"))
-			throw WolfRPGException(ERROR_TAG "Field 'description' not found in patch");
-
-		if (!j.contains("commands"))
-			throw WolfRPGException(ERROR_TAG "Field 'commands' not found in patch");
+		CHECK_JSON_KEY(j, "name", "CommonEvent");
+		CHECK_JSON_KEY(j, "description", "CommonEvent");
+		CHECK_JSON_KEY(j, "commands", "CommonEvent");
 
 		m_name        = ToUTF16(j["name"].get<std::string>());
 		m_description = ToUTF16(j["description"].get<std::string>());
 
+		uint32_t cmdIdx = 0;
+
 		for (const auto& cmdJ : j["commands"])
 		{
-			if (!cmdJ.contains("index"))
-				throw WolfRPGException(ERROR_TAG "Field 'index' not found in patch");
+			CHECK_JSON_KEY(cmdJ, "index", std::format("CommonEvent::commands[{}]", cmdIdx));
+			cmdIdx++;
 
 			const uint32_t index = cmdJ["index"].get<uint32_t>();
 			if (index >= m_commands.size())
-				throw WolfRPGException(ERROR_TAG "Index out of range: " + std::to_string(index) + " >= " + std::to_string(m_commands.size()));
+				throw WolfRPGException(ERROR_TAG + "Index out of range: " + std::to_string(index) + " >= " + std::to_string(m_commands.size()));
 
 			m_commands[index]->Patch(cmdJ);
 		}
@@ -166,7 +163,7 @@ private:
 	{
 		uint8_t indicator = coder.ReadByte();
 		if (indicator != 0x8E)
-			throw WolfRPGException(ERROR_TAG "CommonEvent header indicator not 0x8E (got 0x" + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG + "CommonEvent header indicator not 0x8E (got 0x" + Dec2Hex(indicator) + ")");
 
 		m_id = coder.ReadInt();
 
@@ -180,7 +177,7 @@ private:
 			Command::CommandShPtr::Command command = Command::Command::Init(coder);
 
 			if (!command->Valid())
-				throw WolfRPGException(ERROR_TAG "Command initialization failed");
+				throw WolfRPGException(ERROR_TAG + "Command initialization failed");
 
 			m_commands.push_back(command);
 		}
@@ -190,7 +187,7 @@ private:
 
 		indicator = coder.ReadByte();
 		if (indicator != 0x8F)
-			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x8F (got " + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG + "CommonEvent data indicator not 0x8F (got " + Dec2Hex(indicator) + ")");
 
 		m_unknown3.resize(coder.ReadInt());
 		for (tString& str : m_unknown3)
@@ -222,7 +219,7 @@ private:
 
 		indicator = coder.ReadByte();
 		if (indicator != 0x91)
-			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x91 (got " + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG + "CommonEvent data indicator not 0x91 (got " + Dec2Hex(indicator) + ")");
 
 		m_unknown9 = coder.ReadString();
 
@@ -231,7 +228,7 @@ private:
 		{
 			if (indicator == 0x91) return true;
 
-			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x92 or 0x91 (got " + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG + "CommonEvent data indicator not 0x92 or 0x91 (got " + Dec2Hex(indicator) + ")");
 		}
 
 		m_unknown10Valid = true;
@@ -240,7 +237,7 @@ private:
 
 		indicator = coder.ReadByte();
 		if (indicator != 0x92)
-			throw WolfRPGException(ERROR_TAG "CommonEvent data indicator not 0x92 (got " + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG + "CommonEvent data indicator not 0x92 (got " + Dec2Hex(indicator) + ")");
 
 		return true;
 	}
@@ -323,7 +320,7 @@ public:
 			const tString patchFile = patchFolder + L"/" + comEvName + L".json";
 
 			if (!std::filesystem::exists(patchFile))
-				throw WolfRPGException(ERROR_TAG L"Patch file not found: " + patchFile);
+				throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFile);
 
 			std::ifstream in(patchFile);
 			nlohmann::ordered_json j;
@@ -363,10 +360,10 @@ private:
 
 		m_terminator = coder.ReadByte();
 		if (m_terminator < 0x89)
-			throw WolfRPGException(ERROR_TAG "CommonEvent data terminator smaller than 0x89 (got " + Dec2Hex(m_terminator) + ")");
+			throw WolfRPGException(ERROR_TAG + "CommonEvent data terminator smaller than 0x89 (got " + Dec2Hex(m_terminator) + ")");
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAG "CommonEvent has more data than expected");
+			throw WolfRPGException(ERROR_TAG + "CommonEvent has more data than expected");
 
 		return true;
 	}

@@ -122,7 +122,7 @@ private:
 	void checkValid() const
 	{
 		if (!m_valid)
-			throw WolfRPGException(ERROR_TAG L"Invalid WolfRPG object");
+			throw WolfRPGException(ERROR_TAGW + L"Invalid WolfRPG object");
 	}
 
 	void loadGameDat()
@@ -188,7 +188,7 @@ private:
 			if (!fs::create_directories(dir))
 			{
 				if (!fs::exists(dir))
-					throw WolfRPGException(ERROR_TAG L"Failed to create directory: " + dir);
+					throw WolfRPGException(ERROR_TAGW + L"Failed to create directory: " + dir);
 			}
 		}
 	}

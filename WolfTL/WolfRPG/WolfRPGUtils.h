@@ -4,19 +4,57 @@
 
 #include <codecvt>
 #include <filesystem>
+#include <format>
 #include <iomanip>
 #include <iostream>
 #include <locale>
 #include <regex>
 #include <sstream>
 #include <string>
+#include <source_location>
 
 namespace fs = std::filesystem;
 
-#define ERROR_TAG "[" __FUNCTION__ "] "
+static inline std::string BuildErrorTag(const std::source_location& location)
+{
+	std::string function = location.function_name();
+	// Only keep the file name
+	const std::string file = fs::path(location.file_name()).filename().string();
+
+	// Remove the parameters from the function name
+	std::size_t pos = function.find('(');
+	if (pos != std::string::npos)
+		function = function.substr(0, pos);
+
+	// Remove the return type from the function name
+	pos = function.find_last_of(' ');
+	if (pos != std::string::npos)
+		function = function.substr(pos + 1);
+
+	return std::format("[{}:{} - {}()] ", file, location.line(), function);
+}
+
+static inline std::wstring BuildErrorTagW(const std::source_location& location)
+{
+	const std::string tag = BuildErrorTag(location);
+	return std::wstring(tag.begin(), tag.end());
+}
+
+static inline std::string BuildJsonError(const std::string& key, const std::string& obj)
+{
+	return std::format("Key '{}' for object '{}' not found in patch", key, obj);
+}
+
+#define ERROR_TAG  BuildErrorTag(std::source_location::current())
+#define ERROR_TAGW BuildErrorTagW(std::source_location::current())
+
+#define CHECK_JSON_KEY(JSON, KEY, OBJ)                                                         \
+	do                                                                                         \
+		if (!JSON.contains(KEY)) throw WolfRPGException(ERROR_TAG + BuildJsonError(KEY, OBJ)); \
+	while (0)
 
 #define VERIFY_MAGIC(CODER, MAGIC) \
-	if (!CODER.Verify(MAGIC)) throw WolfRPGException(ERROR_TAG "MAGIC invalid");
+	if (!CODER.Verify(MAGIC)) throw WolfRPGException(ERROR_TAG + "MAGIC invalid");
 
 namespace wolfRPGUtils
 {

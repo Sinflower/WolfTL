@@ -10,7 +10,12 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.2.0";
+static const std::string VERSION = "0.2.1";
+
+/*
+TODO:
+ - Add an option to ignore the name sanity check in the data patching
+*/
 
 class WolfTL
 {
@@ -31,7 +36,7 @@ public:
 	{
 		if (!m_wolf.Valid())
 		{
-			std::wcerr << ERROR_TAG << L"WolfRPG initialization failed" << std::endl;
+			std::cerr << ERROR_TAG << "WolfRPG initialization failed" << std::endl;
 			return;
 		}
 
@@ -47,14 +52,14 @@ public:
 
 		if (!m_wolf.Valid())
 		{
-			std::wcerr << ERROR_TAG << L"WolfRPG initialization failed" << std::endl;
+			std::cerr << ERROR_TAG << "WolfRPG initialization failed" << std::endl;
 			return;
 		}
 
 		// Check if the patch folder exists
 		if (!fs::exists(m_outputPath))
 		{
-			std::wcerr << ERROR_TAG << L"Patch folder does not exist" << std::endl;
+			std::cerr << ERROR_TAG << "Patch folder does not exist" << std::endl;
 			return;
 		}
 
@@ -120,7 +125,7 @@ private:
 		// Check if the patch folder exists
 		if (!fs::exists(mapPatch))
 		{
-			std::wcerr << ERROR_TAG << L"Map patch folder does not exist" << std::endl;
+			std::cerr << ERROR_TAG << "Map patch folder does not exist" << std::endl;
 			return;
 		}
 
@@ -139,7 +144,7 @@ private:
 		// Check if the patch folder exists
 		if (!fs::exists(dbPatch))
 		{
-			std::wcerr << ERROR_TAG << L"Database patch folder does not exist" << std::endl;
+			std::cerr << ERROR_TAG << "Database patch folder does not exist" << std::endl;
 			return;
 		}
 
@@ -158,7 +163,7 @@ private:
 		// Check if the patch folder exists
 		if (!fs::exists(comPatch))
 		{
-			std::wcerr << ERROR_TAG << L"Common event patch folder does not exist" << std::endl;
+			std::cerr << ERROR_TAG << "Common event patch folder does not exist" << std::endl;
 			return;
 		}
 
@@ -220,7 +225,7 @@ int main(int argc, char* argv[])
 	}
 	catch(const std::exception& e)
 	{
-		std::cerr << e.what() << std::endl;
+		std::wcerr << e.what() << std::endl;
 	}
 
 	return 0;

@@ -2,8 +2,10 @@
 
 #include "FileCoder.h"
 
+#include <format>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <string>
 
 class Field
 {
@@ -38,8 +40,7 @@ public:
 
 	void Patch(const nlohmann::ordered_json& j)
 	{
-		if (!j.contains("name"))
-			throw WolfRPGException(ERROR_TAG L"Field 'name' not found in patch");
+		CHECK_JSON_KEY(j, "name", "fields");
 
 		m_name = ToUTF16(j["name"].get<std::string>());
 
@@ -192,29 +193,25 @@ public:
 
 	void Patch(const nlohmann::ordered_json& j)
 	{
-		if (!j.contains("name"))
-			throw WolfRPGException(ERROR_TAG L"Data 'name' not found in patch");
-
-		if (!j.contains("data"))
-			throw WolfRPGException(ERROR_TAG L"Data 'data' not found in patch");
+		CHECK_JSON_KEY(j, "name", "data");
+		CHECK_JSON_KEY(j, "data", "data");
 
 		if (m_stringValues.empty() && m_intValues.empty()) return;
 
 		for (std::size_t i = 0; i < m_pFields->size(); i++)
 		{
 			const nlohmann::ordered_json& fieldData = j["data"][i];
+			const std::string dataStr               = std::format("data[{}]", i);
 
 			const Field& field    = m_pFields->at(i);
 			std::string fieldName = ToUTF8(field.GetName());
 
-			if (!fieldData.contains("name"))
-				throw WolfRPGException(ERROR_TAG L"Data field 'name' not found in patch");
+			CHECK_JSON_KEY(fieldData, "name", dataStr);
+			CHECK_JSON_KEY(fieldData, "value", dataStr);
 
-			if (!fieldData.contains("value"))
-				throw WolfRPGException(ERROR_TAG L"Data field 'value' not found in patch");
 
 			if (fieldName != fieldData["name"])
-				throw WolfRPGException(ERROR_TAG L"Data field name mismatch");
+				throw WolfRPGException(ERROR_TAG + "Data field name mismatch");
 
 			if (field.IsString())
 				m_stringValues[field.Index()] = ToUTF16(fieldData["value"].get<std::string>());
@@ -420,29 +417,22 @@ public:
 
 	void Patch(const nlohmann::ordered_json& j)
 	{
-		if (!j.contains("name"))
-			throw WolfRPGException(ERROR_TAG L"Type 'name' not found in patch");
-
-		if (!j.contains("description"))
-			throw WolfRPGException(ERROR_TAG L"Type 'description' not found in patch");
-
-		if (!j.contains("fields"))
-			throw WolfRPGException(ERROR_TAG L"Type 'fields' not found in patch");
-
-		if (!j.contains("data"))
-			throw WolfRPGException(ERROR_TAG L"Type 'data' not found in patch");
+		CHECK_JSON_KEY(j, "name", "types");
+		CHECK_JSON_KEY(j, "description", "types");
+		CHECK_JSON_KEY(j, "fields", "types");
+		CHECK_JSON_KEY(j, "data", "types");
 
 		m_name        = ToUTF16(j["name"].get<std::string>());
 		m_description = ToUTF16(j["description"].get<std::string>());
 
 		if (m_fields.size() != j["fields"].size())
-			throw WolfRPGException(ERROR_TAG L"Type 'field' count mismatch");
+			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'fields'");
 
 		for (std::size_t i = 0; i < m_fields.size(); i++)
 			m_fields[i].Patch(j["fields"][i]);
 
 		if (m_data.size() != j["data"].size())
-			throw WolfRPGException(ERROR_TAG L"Type 'data' count mismatch");
+			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'data'");
 
 		for (std::size_t i = 0; i < m_data.size(); i++)
 			m_data[i].Patch(j["data"][i]);
@@ -526,18 +516,17 @@ public:
 	{
 		const tString patchFile = patchFolder + L"/" + ::GetFileNameNoExt(m_datFileName) + L".json";
 		if (!fs::exists(patchFile))
-			throw WolfRPGException(ERROR_TAG L"Patch file not found: " + patchFile);
+			throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFile);
 
 		nlohmann::ordered_json j;
 		std::ifstream in(patchFile);
 		in >> j;
 		in.close();
 
-		if (!j.contains("types"))
-			throw WolfRPGException(ERROR_TAG "Patch file does not contain 'types'");
+		CHECK_JSON_KEY(j, "types", "Database");
 
 		if (m_types.size() != j["types"].size())
-			throw WolfRPGException(ERROR_TAG "Patch file 'types' count mismatch");
+			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'types'");
 
 		for (std::size_t i = 0; i < m_types.size(); i++)
 			m_types[i].Patch(j["types"][i]);
@@ -563,7 +552,7 @@ private:
 				m_types.push_back(Type(coder));
 
 			if (!coder.IsEof())
-				throw WolfRPGException(ERROR_TAG L"Database [" + projectFileName + L"] has more data than expected");
+				throw WolfRPGException(ERROR_TAGW + L"Database [" + projectFileName + L"] has more data than expected");
 		}
 
 		FileCoder coder(datFileName, FileCoder::Mode::READ, true, DAT_SEED_INDICES);
@@ -577,7 +566,7 @@ private:
 		uint32_t typeCnt = coder.ReadInt();
 		if (typeCnt != m_types.size())
 		{
-			throw WolfRPGException(ERROR_TAG L"Database [" + datFileName + L"] project and dat type count mismatch (" + std::to_wstring(m_types.size()) + L" vs. " + std::to_wstring(typeCnt) + L")");
+			throw WolfRPGException(ERROR_TAGW + L"Database [" + datFileName + L"] project and dat type count mismatch (" + std::to_wstring(m_types.size()) + L" vs. " + std::to_wstring(typeCnt) + L")");
 			return false;
 		}
 
@@ -587,16 +576,16 @@ private:
 			cnt++;
 			if (!type.ReadDat(coder))
 			{
-				throw WolfRPGException(ERROR_TAG "Failed at readDat for type(" + std::to_string(cnt) + ")");
+				throw WolfRPGException(ERROR_TAG + "Failed at readDat for type(" + std::to_string(cnt) + ")");
 				return false;
 			}
 		}
 
 		if (coder.ReadByte() != m_startEndIndicator)
-			throw WolfRPGException(ERROR_TAG L"No " + Dec2HexW(m_startEndIndicator) + L" terminator at the end of \"" + datFileName + L"\"");
+			throw WolfRPGException(ERROR_TAGW + L"No " + Dec2HexW(m_startEndIndicator) + L" terminator at the end of \"" + datFileName + L"\"");
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAG L"Database [" + datFileName + L"] has more data than expected");
+			throw WolfRPGException(ERROR_TAGW + L"Database [" + datFileName + L"] has more data than expected");
 
 		return true;
 	}

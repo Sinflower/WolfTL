@@ -228,7 +228,7 @@ public:
 		uint32_t size = ReadInt();
 
 		if (size == 0)
-			throw WolfRPGException(ERROR_TAG "Zero length string encountered.");
+			throw WolfRPGException(ERROR_TAG + "Zero length string encountered.");
 
 		Bytes data = Read(size);
 
