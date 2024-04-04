@@ -29,52 +29,56 @@ public:
 		else
 			VERIFY_MAGIC(coder, MAGIC_NUMBER)
 
-		m_oldSize = coder.GetSize() + static_cast<uint32_t>(m_cryptHeader.size());
+		m_oldSize = coder.GetSize() + static_cast<uint32_t>(m_cryptHeader.size()) - 1;
 
 		m_unknown1    = coder.ReadByteArray();
-		m_fileVersion = coder.ReadInt();
+		m_stringCount = coder.ReadInt();
 
+		// String 0
 		m_title = coder.ReadString();
 
+		// String 1
 		m_magicString = coder.ReadString();
 
 		if (m_magicString != MAGIC_STRING)
 			throw WolfRPGException(ERROR_TAGW + L"Invalid magic string: \"" + m_magicString + L"\" expected: \"" + MAGIC_STRING + L"\"");
 
-		m_unknown2 = coder.ReadByteArray();
-		m_font     = coder.ReadString();
+		// String 2
+		m_decryptKey = coder.ReadByteArray();
+		// String 3
+		m_font = coder.ReadString();
 
-		m_subFonts;
-
-		for (int i = 0; i < 3; i++)
+		// Strings 4-6
+		for (uint32_t i = 0; i < 3; i++)
 			m_subFonts.push_back(coder.ReadString());
 
+		// String 7
 		m_defaultPCGraphic = coder.ReadString();
 
-		if (m_fileVersion >= 9)
-			m_version = coder.ReadString();
+		// String 8
+		if (m_stringCount >= 9)
+			m_titlePlus = coder.ReadString();
 
-		m_unknown3 = coder.Read();
+		// Strings 9-13
+		if (m_stringCount > 9)
+		{
+			m_roadImg = coder.ReadString();
+			m_gaugeImg = coder.ReadString();
+			m_startUpMsg = coder.ReadString();
+			m_titleMsg = coder.ReadString();
+		}
+
+		m_fileSize = coder.ReadInt();
+
+		if (m_fileSize != m_oldSize)
+			throw WolfRPGException(ERROR_TAG + std::format("Game.dat has different size than expected - {} vs {}", m_fileSize, m_oldSize));
+
+		m_unknown2 = coder.Read();
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAGW + L"GameDat has more data than expected");
+			throw WolfRPGException(ERROR_TAG + "Game.dat has more data than expected");
 
 		return true;
-	}
-
-	void DumpConsole() const
-	{
-		std::wcout << "Filename: " << m_fileName << std::endl;
-		std::wcout << "File Version: " << m_fileVersion << std::endl;
-		std::wcout << "Title: " << m_title << std::endl;
-		std::wcout << "Magic String: " << m_magicString << std::endl;
-		std::wcout << "Font: " << m_font << std::endl;
-
-		for (size_t i = 0; i < m_subFonts.size(); i++)
-			std::wcout << "SubFont[" << i << "]: " << m_subFonts.at(i) << std::endl;
-
-		std::wcout << "Default PC Graphic: " << m_defaultPCGraphic << std::endl;
-		std::wcout << "Version: " << m_version << std::endl;
 	}
 
 	void Dump(const tString& outputDir) const
@@ -82,28 +86,43 @@ public:
 		tString outputFN = outputDir + L"/" + GetFileName(m_fileName);
 		FileCoder coder(outputFN, FileCoder::Mode::WRITE, false, SEED_INDICES);
 
-		Bytes uk3 = calcNewSize();
-
 		coder.Write(MAGIC_NUMBER);
 
 		coder.WriteByteArray(m_unknown1);
-		coder.WriteInt(m_fileVersion);
+		coder.WriteInt(m_stringCount);
 		coder.WriteString(m_title);
 		coder.WriteString(MAGIC_STRING);
-		coder.WriteByteArray(m_unknown2);
+		coder.WriteByteArray(m_decryptKey);
 		coder.WriteString(m_font);
 		for (const tString& font : m_subFonts)
 			coder.WriteString(font);
 		coder.WriteString(m_defaultPCGraphic);
-		if (m_fileVersion >= 9) coder.WriteString(m_version);
-		coder.Write(uk3);
+		if (m_stringCount >= 9) coder.WriteString(m_titlePlus);
+
+		if (m_stringCount > 9)
+		{
+			coder.WriteString(m_roadImg);
+			coder.WriteString(m_gaugeImg);
+			coder.WriteString(m_startUpMsg);
+			coder.WriteString(m_titleMsg);
+		}
+
+		coder.WriteInt(calcNewSize());
+		coder.Write(m_unknown2);
 	}
 
 	void ToJson(const tString& outputFolder) const
 	{
-		nlohmann::json j;
+		nlohmann::ordered_json j;
 
 		j["Title"] = ToUTF8(m_title);
+		j["TitlePlus"] = ToUTF8(m_titlePlus);
+
+		if (m_stringCount > 9)
+		{
+			j["StartUpMsg"] = ToUTF8(m_startUpMsg);
+			j["TitleMsg"] = ToUTF8(m_titleMsg);
+		}
 
 		const tString outputFile = outputFolder + L"/" + ::GetFileNameNoExt(m_fileName) + L".json";
 
@@ -128,6 +147,13 @@ public:
 		in.close();
 
 		m_title = ToUTF16(j["Title"]);
+		m_titlePlus = ToUTF16(j["TitlePlus"]);
+
+		if (m_stringCount > 9)
+		{
+			m_startUpMsg = ToUTF16(j["StartUpMsg"]);
+			m_titleMsg = ToUTF16(j["TitleMsg"]);
+		}
 	}
 
 	const tString& GetTitle() const
@@ -137,7 +163,7 @@ public:
 
 	const tString& GetVersion() const
 	{
-		return m_version;
+		return m_titlePlus;
 	}
 
 	const tString& GetFont() const
@@ -151,15 +177,15 @@ public:
 	}
 
 private:
-	Bytes calcNewSize() const
+	std::size_t calcNewSize() const
 	{
 		std::size_t size = 0;
 		size += MAGIC_NUMBER.Size();
 		size += m_unknown1.size() + 4;
-		size += sizeof(m_fileVersion);
+		size += sizeof(m_stringCount);
 		size += FileCoder::CalcStringSize(m_title) + 4;
 		size += FileCoder::CalcStringSize(MAGIC_STRING) + 4;
-		size += m_unknown2.size() + 4;
+		size += m_decryptKey.size() + 4;
 		size += FileCoder::CalcStringSize(m_font) + 4;
 
 		for (const tString& font : m_subFonts)
@@ -167,20 +193,21 @@ private:
 
 		size += FileCoder::CalcStringSize(m_defaultPCGraphic) + 4;
 
-		if (m_fileVersion >= 9) size += FileCoder::CalcStringSize(m_version) + 4;
+		if (m_stringCount >= 9) size += FileCoder::CalcStringSize(m_titlePlus) + 4;
 
-		size += m_unknown3.size();
+		if (m_stringCount > 9)
+		{
+			size += FileCoder::CalcStringSize(m_roadImg) + 4;
+			size += FileCoder::CalcStringSize(m_gaugeImg) + 4;
+			size += FileCoder::CalcStringSize(m_startUpMsg) + 4;
+			size += FileCoder::CalcStringSize(m_titleMsg) + 4;
+		}
 
-		std::size_t offset = 1;
+		size += sizeof(m_fileSize);
 
-		while (*reinterpret_cast<const uint32_t*>(&m_unknown3[offset]) != (m_oldSize - 1))
-			offset += *reinterpret_cast<const uint32_t*>(&m_unknown3[offset]) + 4; // ?
+		size += m_unknown2.size();
 
-		Bytes uk3 = m_unknown3;
-
-		*reinterpret_cast<uint32_t*>(&uk3[offset]) = static_cast<uint32_t>(size);
-
-		return uk3;
+		return size;
 	}
 
 private:
@@ -189,15 +216,20 @@ private:
 	Bytes m_cryptHeader = {};
 
 	Bytes m_unknown1           = {};
-	uint32_t m_fileVersion     = 0;
+	uint32_t m_stringCount     = 0;
 	tString m_title            = TEXT("");
 	tString m_magicString      = TEXT("");
-	Bytes m_unknown2           = {};
+	Bytes m_decryptKey         = {};
 	tString m_font             = TEXT("");
 	tStrings m_subFonts        = {};
 	tString m_defaultPCGraphic = TEXT("");
-	tString m_version          = TEXT("");
-	Bytes m_unknown3           = {};
+	tString m_titlePlus        = TEXT("");
+	tString m_roadImg          = TEXT("");
+	tString m_gaugeImg         = TEXT("");
+	tString m_startUpMsg	   = TEXT("");
+	tString m_titleMsg         = TEXT("");
+	uint32_t m_fileSize        = 0;
+	Bytes m_unknown2           = {};
 
 	uint32_t m_oldSize = 0;
 

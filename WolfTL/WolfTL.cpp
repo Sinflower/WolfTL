@@ -10,13 +10,12 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.2.2";
+static const std::string VERSION = "0.2.3";
 
 /*
 TODO:
  - Add an option to ignore the name sanity check in the data patching
- - Add title plus parsing and editing for game.dat
- - Add parsing of general title bar information
+ - Add generic base class for all the data classes
 */
 
 class WolfTL
