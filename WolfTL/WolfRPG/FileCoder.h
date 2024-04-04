@@ -169,6 +169,11 @@ public:
 	{
 	}
 
+	const DWORD& GetSize() const
+	{
+		return m_reader.GetSize();
+	}
+
 	const Bytes& GetCryptHeader() const
 	{
 		return m_cryptHeader;
@@ -320,7 +325,7 @@ public:
 
 #ifdef BIT_64
 	// For 64 bit an additional method is required to properly handle size_t inputs
-	void WriteInt(const size_t& data)
+	void WriteInt(const std::size_t& data)
 	{
 		WriteInt(static_cast<uint32_t>(data));
 	}
@@ -374,6 +379,14 @@ public:
 		return s_isUTF8;
 	}
 
+	static std::size_t CalcStringSize(const tString& str)
+	{
+		if (s_isUTF8)
+			return ToUTF8(str).size() + 1;
+		else
+			return utf82sjis(str).size();
+	}
+
 private:
 	void cryptDat(Bytes& data, const Bytes& seeds)
 	{
@@ -394,7 +407,7 @@ private:
 			byte ^= static_cast<uint8_t>(rand());
 	}
 
-	const tString sjis2utf8(const Bytes& sjis)
+	static tString sjis2utf8(const Bytes& sjis)
 	{
 		const LPCCH pSJIS = reinterpret_cast<const LPCCH>(sjis.data());
 		int sjisSize      = MultiByteToWideChar(932, 0, pSJIS, -1, NULL, 0);
@@ -406,7 +419,7 @@ private:
 		return utf8;
 	}
 
-	const Bytes utf82sjis(const tString& utf8)
+	static Bytes utf82sjis(const tString& utf8)
 	{
 		// Empty strings are length 1 with terminating 0
 		if (utf8.empty()) return Bytes(1, 0);

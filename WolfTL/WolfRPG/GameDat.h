@@ -2,7 +2,9 @@
 
 #include "FileCoder.h"
 #include "WolfRPGUtils.h"
+
 #include <iostream>
+#include <nlohmann\json.hpp>
 
 class GameDat
 {
@@ -27,6 +29,8 @@ public:
 		else
 			VERIFY_MAGIC(coder, MAGIC_NUMBER)
 
+		m_oldSize = coder.GetSize() + static_cast<uint32_t>(m_cryptHeader.size());
+
 		m_unknown1    = coder.ReadByteArray();
 		m_fileVersion = coder.ReadInt();
 
@@ -50,9 +54,7 @@ public:
 		if (m_fileVersion >= 9)
 			m_version = coder.ReadString();
 
-		m_unknown3 = coder.ReadInt();
-
-		m_unknown4 = coder.Read();
+		m_unknown3 = coder.Read();
 
 		if (!coder.IsEof())
 			throw WolfRPGException(ERROR_TAGW + L"GameDat has more data than expected");
@@ -80,6 +82,8 @@ public:
 		tString outputFN = outputDir + L"/" + GetFileName(m_fileName);
 		FileCoder coder(outputFN, FileCoder::Mode::WRITE, false, SEED_INDICES);
 
+		Bytes uk3 = calcNewSize();
+
 		coder.Write(MAGIC_NUMBER);
 
 		coder.WriteByteArray(m_unknown1);
@@ -88,12 +92,42 @@ public:
 		coder.WriteString(MAGIC_STRING);
 		coder.WriteByteArray(m_unknown2);
 		coder.WriteString(m_font);
-		for (tString font : m_subFonts)
+		for (const tString& font : m_subFonts)
 			coder.WriteString(font);
 		coder.WriteString(m_defaultPCGraphic);
 		if (m_fileVersion >= 9) coder.WriteString(m_version);
-		coder.WriteInt(m_unknown3);
-		coder.Write(m_unknown4);
+		coder.Write(uk3);
+	}
+
+	void ToJson(const tString& outputFolder) const
+	{
+		nlohmann::json j;
+
+		j["Title"] = ToUTF8(m_title);
+
+		const tString outputFile = outputFolder + L"/" + ::GetFileNameNoExt(m_fileName) + L".json";
+
+		std::ofstream out(outputFile);
+		out << j.dump(4);
+
+		out.close();
+	}
+
+	void Patch(const tString& patchFolder)
+	{
+		const tString patchFile = patchFolder + L"/" + ::GetFileNameNoExt(m_fileName) + L".json";
+		if (!fs::exists(patchFile))
+		{
+			std::wcerr << ERROR_TAGW << L"Patch file not found: " << patchFile << std::endl;
+			return;
+		}
+
+		nlohmann::ordered_json j;
+		std::ifstream in(patchFile);
+		in >> j;
+		in.close();
+
+		m_title = ToUTF16(j["Title"]);
 	}
 
 	const tString& GetTitle() const
@@ -117,6 +151,39 @@ public:
 	}
 
 private:
+	Bytes calcNewSize() const
+	{
+		std::size_t size = 0;
+		size += MAGIC_NUMBER.Size();
+		size += m_unknown1.size() + 4;
+		size += sizeof(m_fileVersion);
+		size += FileCoder::CalcStringSize(m_title) + 4;
+		size += FileCoder::CalcStringSize(MAGIC_STRING) + 4;
+		size += m_unknown2.size() + 4;
+		size += FileCoder::CalcStringSize(m_font) + 4;
+
+		for (const tString& font : m_subFonts)
+			size += FileCoder::CalcStringSize(font) + 4;
+
+		size += FileCoder::CalcStringSize(m_defaultPCGraphic) + 4;
+
+		if (m_fileVersion >= 9) size += FileCoder::CalcStringSize(m_version) + 4;
+
+		size += m_unknown3.size();
+
+		std::size_t offset = 1;
+
+		while (*reinterpret_cast<const uint32_t*>(&m_unknown3[offset]) != (m_oldSize - 1))
+			offset += *reinterpret_cast<const uint32_t*>(&m_unknown3[offset]) + 4; // ?
+
+		Bytes uk3 = m_unknown3;
+
+		*reinterpret_cast<uint32_t*>(&uk3[offset]) = static_cast<uint32_t>(size);
+
+		return uk3;
+	}
+
+private:
 	tString m_fileName;
 
 	Bytes m_cryptHeader = {};
@@ -130,8 +197,9 @@ private:
 	tStrings m_subFonts        = {};
 	tString m_defaultPCGraphic = TEXT("");
 	tString m_version          = TEXT("");
-	uint32_t m_unknown3        = 0;
-	Bytes m_unknown4           = {};
+	Bytes m_unknown3           = {};
+
+	uint32_t m_oldSize = 0;
 
 	inline static const uInts SEED_INDICES{ 0, 8, 6 };
 	inline static const MagicNumber MAGIC_NUMBER{ { 0x57, 0x00, 0x00, 0x4f, 0x4c, 0x00, 0x46, 0x4d, 0x00 }, 8 };

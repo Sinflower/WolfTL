@@ -10,18 +10,21 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.2.1";
+static const std::string VERSION = "0.2.2";
 
 /*
 TODO:
  - Add an option to ignore the name sanity check in the data patching
+ - Add title plus parsing and editing for game.dat
+ - Add parsing of general title bar information
 */
 
 class WolfTL
 {
-	inline static const tString MAP_OUTPUT   = TEXT("dump/mps/");
-	inline static const tString DB_OUTPUT    = TEXT("dump/db/");
-	inline static const tString COM_OUTPUT   = TEXT("dump/common/");
+	inline static const tString OUTPUT_DIR   = TEXT("dump/");
+	inline static const tString MAP_OUTPUT   = OUTPUT_DIR + TEXT("mps/");
+	inline static const tString DB_OUTPUT    = OUTPUT_DIR + TEXT("db/");
+	inline static const tString COM_OUTPUT   = OUTPUT_DIR + TEXT("common/");
 	inline static const tString PATCHED_DATA = TEXT("/patched/data/");
 
 public:
@@ -43,6 +46,7 @@ public:
 		maps2Json();
 		databases2Json();
 		commonEvents2Json();
+		gameDat2Json();
 	}
 
 	void Patch(const bool& inplace = false)
@@ -66,6 +70,7 @@ public:
 		patchMaps(m_outputPath);
 		patchDatabases(m_outputPath);
 		patchCommonEvents(m_outputPath);
+		patchGameDat(m_outputPath);
 
 		// Save the patched data
 		m_wolf.Save2File((inplace ? m_dataPath : (m_outputPath + PATCHED_DATA)));
@@ -112,6 +117,17 @@ private:
 		fs::create_directories(comOutput);
 
 		m_wolf.GetCommonEvents().ToJson(comOutput);
+
+		std::cout << "Done" << std::endl;
+	}
+
+	void gameDat2Json() const
+	{
+		std::cout << "Writing GameDat to JSON ... " << std::flush;
+
+		const tString gameDatOutput = std::format(TEXT("{}/{}"), m_outputPath, OUTPUT_DIR);
+
+		m_wolf.GetGameDat().ToJson(gameDatOutput);
 
 		std::cout << "Done" << std::endl;
 	}
@@ -168,6 +184,17 @@ private:
 		}
 
 		m_wolf.GetCommonEvents().Patch(comPatch);
+
+		std::cout << "Done" << std::endl;
+	}
+
+	void patchGameDat(const tString& patchFolder)
+	{
+		std::cout << "Patching GameDat ... " << std::flush;
+
+		const tString gameDatPatch = std::format(TEXT("{}/{}"), patchFolder, OUTPUT_DIR);
+
+		m_wolf.GetGameDat().Patch(gameDatPatch);
 
 		std::cout << "Done" << std::endl;
 	}
