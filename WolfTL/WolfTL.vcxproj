@@ -152,6 +152,7 @@
     <ClInclude Include="WolfRPG\Map.h" />
     <ClInclude Include="WolfRPG\RouteCommand.h" />
     <ClInclude Include="WolfRPG\Types.h" />
+    <ClInclude Include="WolfRPG\WolfDataBase.h" />
     <ClInclude Include="WolfRPG\WolfRPG.h" />
     <ClInclude Include="WolfRPG\WolfRPGException.h" />
     <ClInclude Include="WolfRPG\WolfRPGUtils.h" />

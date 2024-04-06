@@ -1,34 +1,45 @@
 #pragma once
 
 #include "FileCoder.h"
+#include "WolfDataBase.h"
 #include "WolfRPGUtils.h"
 
 #include <iostream>
 #include <nlohmann\json.hpp>
 
-class GameDat
+class GameDat : public WolfDataBase
 {
 public:
 	explicit GameDat(const tString& fileName = L"") :
-		m_fileName(fileName)
+		WolfDataBase(fileName, MAGIC_NUMBER, false, SEED_INDICES)
 	{
 		if (!fileName.empty())
 			Load(fileName);
 	}
 
-	bool Load(const tString& fileName)
+	const tString& GetTitle() const
 	{
-		m_fileName = fileName;
+		return m_title;
+	}
 
-		if (m_fileName.empty())
-			throw WolfRPGException(ERROR_TAG + "Trying to load with empty filename");
+	const tString& GetVersion() const
+	{
+		return m_titlePlus;
+	}
 
-		FileCoder coder(fileName, FileCoder::Mode::READ, false, SEED_INDICES);
-		if (coder.IsEncrypted())
-			m_cryptHeader = coder.GetCryptHeader();
-		else
-			VERIFY_MAGIC(coder, MAGIC_NUMBER)
+	const tString& GetFont() const
+	{
+		return m_font;
+	}
 
+	const tStrings& GetSubFonts() const
+	{
+		return m_subFonts;
+	}
+
+protected:
+	bool load(FileCoder& coder) override
+	{
 		m_oldSize = coder.GetSize() + static_cast<uint32_t>(m_cryptHeader.size()) - 1;
 
 		m_unknown1    = coder.ReadByteArray();
@@ -62,10 +73,10 @@ public:
 		// Strings 9-13
 		if (m_stringCount > 9)
 		{
-			m_roadImg = coder.ReadString();
-			m_gaugeImg = coder.ReadString();
+			m_roadImg    = coder.ReadString();
+			m_gaugeImg   = coder.ReadString();
 			m_startUpMsg = coder.ReadString();
-			m_titleMsg = coder.ReadString();
+			m_titleMsg   = coder.ReadString();
 		}
 
 		m_fileSize = coder.ReadInt();
@@ -81,11 +92,8 @@ public:
 		return true;
 	}
 
-	void Dump(const tString& outputDir) const
+	void dump(FileCoder& coder) const
 	{
-		tString outputFN = outputDir + L"/" + GetFileName(m_fileName);
-		FileCoder coder(outputFN, FileCoder::Mode::WRITE, false, SEED_INDICES);
-
 		coder.Write(MAGIC_NUMBER);
 
 		coder.WriteByteArray(m_unknown1);
@@ -111,69 +119,32 @@ public:
 		coder.Write(m_unknown2);
 	}
 
-	void ToJson(const tString& outputFolder) const
+	nlohmann::ordered_json toJson() const
 	{
 		nlohmann::ordered_json j;
 
-		j["Title"] = ToUTF8(m_title);
+		j["Title"]     = ToUTF8(m_title);
 		j["TitlePlus"] = ToUTF8(m_titlePlus);
 
 		if (m_stringCount > 9)
 		{
 			j["StartUpMsg"] = ToUTF8(m_startUpMsg);
-			j["TitleMsg"] = ToUTF8(m_titleMsg);
+			j["TitleMsg"]   = ToUTF8(m_titleMsg);
 		}
 
-		const tString outputFile = outputFolder + L"/" + ::GetFileNameNoExt(m_fileName) + L".json";
-
-		std::ofstream out(outputFile);
-		out << j.dump(4);
-
-		out.close();
+		return j;
 	}
 
-	void Patch(const tString& patchFolder)
+	void patch(const nlohmann::ordered_json& j)
 	{
-		const tString patchFile = patchFolder + L"/" + ::GetFileNameNoExt(m_fileName) + L".json";
-		if (!fs::exists(patchFile))
-		{
-			std::wcerr << ERROR_TAGW << L"Patch file not found: " << patchFile << std::endl;
-			return;
-		}
-
-		nlohmann::ordered_json j;
-		std::ifstream in(patchFile);
-		in >> j;
-		in.close();
-
-		m_title = ToUTF16(j["Title"]);
+		m_title     = ToUTF16(j["Title"]);
 		m_titlePlus = ToUTF16(j["TitlePlus"]);
 
 		if (m_stringCount > 9)
 		{
 			m_startUpMsg = ToUTF16(j["StartUpMsg"]);
-			m_titleMsg = ToUTF16(j["TitleMsg"]);
+			m_titleMsg   = ToUTF16(j["TitleMsg"]);
 		}
-	}
-
-	const tString& GetTitle() const
-	{
-		return m_title;
-	}
-
-	const tString& GetVersion() const
-	{
-		return m_titlePlus;
-	}
-
-	const tString& GetFont() const
-	{
-		return m_font;
-	}
-
-	const tStrings& GetSubFonts() const
-	{
-		return m_subFonts;
 	}
 
 private:
@@ -211,10 +182,6 @@ private:
 	}
 
 private:
-	tString m_fileName;
-
-	Bytes m_cryptHeader = {};
-
 	Bytes m_unknown1           = {};
 	uint32_t m_stringCount     = 0;
 	tString m_title            = TEXT("");
@@ -226,7 +193,7 @@ private:
 	tString m_titlePlus        = TEXT("");
 	tString m_roadImg          = TEXT("");
 	tString m_gaugeImg         = TEXT("");
-	tString m_startUpMsg	   = TEXT("");
+	tString m_startUpMsg       = TEXT("");
 	tString m_titleMsg         = TEXT("");
 	uint32_t m_fileSize        = 0;
 	Bytes m_unknown2           = {};

@@ -209,7 +209,6 @@ public:
 			CHECK_JSON_KEY(fieldData, "name", dataStr);
 			CHECK_JSON_KEY(fieldData, "value", dataStr);
 
-
 			if (fieldName != fieldData["name"])
 				throw WolfRPGException(ERROR_TAG + "Data field name mismatch");
 
@@ -470,7 +469,7 @@ public:
 		m_projectFileName(projectFileName),
 		m_datFileName(datFileName)
 	{
-		m_valid = init(projectFileName, datFileName);
+		m_valid = init();
 	}
 
 	void Dump(const tString& outputDir) const
@@ -543,19 +542,19 @@ public:
 	}
 
 private:
-	bool init(const tString& projectFileName, const tString& datFileName)
+	bool init()
 	{
 		{
-			FileCoder coder(projectFileName, FileCoder::Mode::READ);
+			FileCoder coder(m_projectFileName, FileCoder::Mode::READ);
 			uint32_t typeCnt = coder.ReadInt();
 			for (uint32_t i = 0; i < typeCnt; i++)
 				m_types.push_back(Type(coder));
 
 			if (!coder.IsEof())
-				throw WolfRPGException(ERROR_TAGW + L"Database [" + projectFileName + L"] has more data than expected");
+				throw WolfRPGException(ERROR_TAGW + L"Database [" + m_projectFileName + L"] has more data than expected");
 		}
 
-		FileCoder coder(datFileName, FileCoder::Mode::READ, true, DAT_SEED_INDICES);
+		FileCoder coder(m_datFileName, FileCoder::Mode::READ, true, DAT_SEED_INDICES);
 		if (coder.IsEncrypted())
 			m_cryptHeader = coder.GetCryptHeader();
 		else
@@ -566,7 +565,7 @@ private:
 		uint32_t typeCnt = coder.ReadInt();
 		if (typeCnt != m_types.size())
 		{
-			throw WolfRPGException(ERROR_TAGW + L"Database [" + datFileName + L"] project and dat type count mismatch (" + std::to_wstring(m_types.size()) + L" vs. " + std::to_wstring(typeCnt) + L")");
+			throw WolfRPGException(ERROR_TAGW + L"Database [" + m_datFileName + L"] project and dat type count mismatch (" + std::to_wstring(m_types.size()) + L" vs. " + std::to_wstring(typeCnt) + L")");
 			return false;
 		}
 
@@ -582,10 +581,10 @@ private:
 		}
 
 		if (coder.ReadByte() != m_startEndIndicator)
-			throw WolfRPGException(ERROR_TAGW + L"No " + Dec2HexW(m_startEndIndicator) + L" terminator at the end of \"" + datFileName + L"\"");
+			throw WolfRPGException(ERROR_TAGW + L"No " + Dec2HexW(m_startEndIndicator) + L" terminator at the end of \"" + m_datFileName + L"\"");
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAGW + L"Database [" + datFileName + L"] has more data than expected");
+			throw WolfRPGException(ERROR_TAGW + L"Database [" + m_datFileName + L"] has more data than expected");
 
 		return true;
 	}

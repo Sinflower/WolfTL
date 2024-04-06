@@ -10,12 +10,11 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.2.3";
+static const std::string VERSION = "0.2.4";
 
 /*
 TODO:
  - Add an option to ignore the name sanity check in the data patching
- - Add generic base class for all the data classes
 */
 
 class WolfTL

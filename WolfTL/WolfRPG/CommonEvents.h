@@ -2,6 +2,7 @@
 
 #include "Command.h"
 #include "FileCoder.h"
+#include "WolfDataBase.h"
 #include "WolfRPGUtils.h"
 
 #include <array>
@@ -265,34 +266,21 @@ private:
 	bool m_unknown10Valid = false;
 };
 
-class CommonEvents
+class CommonEvents : public WolfDataBase
 {
 public:
 	CommonEvents() :
+		WolfDataBase(TEXT(""), MAGIC_NUMBER),
 		m_valid(false)
 	{
 	}
 
 	explicit CommonEvents(const tString& fileName) :
-		m_valid(false),
-		m_fileName(fileName)
+		WolfDataBase(fileName, MAGIC_NUMBER, false, SEED_INDICES),
+		m_valid(false)
 	{
-		m_valid = init(fileName);
-	}
-
-	void Dump(const tString& outputDir) const
-	{
-		tString outputFN = outputDir + L"/" + GetFileName(m_fileName);
-		FileCoder coder(outputFN, FileCoder::Mode::WRITE, false, DAT_SEED_INDICES);
-
-		coder.Write(MAGIC_NUMBER);
-
-		coder.WriteByte(m_startIndicator);
-		coder.WriteInt(m_events.size());
-		for (const CommonEvent& ev : m_events)
-			ev.Dump(coder);
-
-		coder.WriteByte(m_terminator);
+		if (!fileName.empty())
+			m_valid = Load(fileName);
 	}
 
 	void ToJson(const tString& outputFolder) const
@@ -330,7 +318,6 @@ public:
 			ev.Patch(j);
 		}
 	}
-
 	const CommonEvent::CommonEvents& GetEvents() const
 	{
 		return m_events;
@@ -341,13 +328,9 @@ public:
 		return m_valid;
 	}
 
-private:
-	bool init(const tString& fileName)
+protected:
+	bool load(FileCoder& coder)
 	{
-		FileCoder coder(fileName, FileCoder::Mode::READ, false, DAT_SEED_INDICES);
-		if (!coder.IsEncrypted())
-			VERIFY_MAGIC(coder, MAGIC_NUMBER);
-
 		m_startIndicator  = coder.ReadByte();
 		uint32_t eventCnt = coder.ReadInt();
 		m_events          = CommonEvent::CommonEvents(eventCnt);
@@ -368,15 +351,35 @@ private:
 		return true;
 	}
 
+	void dump(FileCoder& coder) const
+	{
+		coder.Write(MAGIC_NUMBER);
+
+		coder.WriteByte(m_startIndicator);
+		coder.WriteInt(m_events.size());
+		for (const CommonEvent& ev : m_events)
+			ev.Dump(coder);
+
+		coder.WriteByte(m_terminator);
+	}
+
+	nlohmann::ordered_json toJson() const
+	{
+		return nlohmann::ordered_json();
+	}
+
+	void patch([[maybe_unused]] const nlohmann::ordered_json& j)
+	{
+	}
+
 private:
 	bool m_valid = false;
 
 	CommonEvent::CommonEvents m_events = {};
 
-	tString m_fileName    = TEXT("");
 	BYTE m_startIndicator = 0;
 	BYTE m_terminator     = 0;
 
-	inline static const uInts DAT_SEED_INDICES{ 0, 3, 9 };
+	inline static const uInts SEED_INDICES{ 0, 3, 9 };
 	inline static const MagicNumber MAGIC_NUMBER = { { 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x43, 0x00 }, 5 };
 };

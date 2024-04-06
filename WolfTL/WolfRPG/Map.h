@@ -2,6 +2,7 @@
 #include "Command.h"
 #include "FileCoder.h"
 #include "RouteCommand.h"
+#include "WolfDataBase.h"
 #include "WolfRPGUtils.h"
 
 #include <fstream>
@@ -363,26 +364,24 @@ private:
 
 using Events = std::vector<Event>;
 
-class Map
+class Map : public WolfDataBase
 {
 public:
 	explicit Map(const tString& fileName = L"") :
-		m_fileName(fileName)
+		WolfDataBase(fileName, MAGIC_NUMBER)
 	{
 		if (!fileName.empty())
 			Load(fileName);
 	}
 
-	bool Load(const tString& fileName)
+	const Events& GetEvents() const
 	{
-		m_fileName = fileName;
+		return m_events;
+	}
 
-		if (m_fileName.empty())
-			throw WolfRPGException(ERROR_TAG + "Trying to load map with empty filename");
-
-		FileCoder coder(fileName, FileCoder::Mode::READ);
-		VERIFY_MAGIC(coder, MAGIC_NUMBER);
-
+protected:
+	bool load(FileCoder& coder)
+	{
 		m_unknown1 = coder.ReadInt();
 		m_unknown2 = coder.ReadByte();
 		m_unknown3 = coder.ReadString();
@@ -424,20 +423,13 @@ public:
 			throw WolfRPGException(ERROR_TAG + "Unexpected event indicator: " + Dec2Hex(indicator) + " expected 0x66");
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAGW + L"Map [" + fileName + L"] has more data than expected");
+			throw WolfRPGException(ERROR_TAGW + L"Map [" + m_fileName + L"] has more data than expected");
 
 		return true;
 	}
 
-	const tString& FileName() const
+	void dump(FileCoder& coder) const
 	{
-		return m_fileName;
-	}
-
-	void Dump(const tString& outputDir) const
-	{
-		tString outputFN = outputDir + L"/" + ::GetFileName(m_fileName);
-		FileCoder coder(outputFN, FileCoder::Mode::WRITE);
 		coder.Write(MAGIC_NUMBER);
 
 		coder.WriteInt(m_unknown1);
@@ -462,7 +454,7 @@ public:
 		coder.WriteByte(0x66);
 	}
 
-	void ToJson(const tString& outputFolder) const
+	nlohmann::ordered_json toJson() const
 	{
 		nlohmann::ordered_json j;
 		j["events"] = nlohmann::ordered_json::array();
@@ -470,37 +462,16 @@ public:
 		for (const Event& ev : m_events)
 			j["events"].push_back(ev.ToJson());
 
-		const tString outputFile = outputFolder + L"/" + ::GetFileNameNoExt(m_fileName) + L".json";
-
-		std::ofstream out(outputFile);
-		out << j.dump(4);
-
-		out.close();
+		return j;
 	}
 
-	void Patch(const tString& patchFolder)
+	void patch(const nlohmann::ordered_json& j)
 	{
-		const tString patchFile = patchFolder + L"/" + ::GetFileNameNoExt(m_fileName) + L".json";
-		if (!fs::exists(patchFile))
-			throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFile);
-
-		nlohmann::ordered_json j;
-		std::ifstream in(patchFile);
-		in >> j;
-		in.close();
-
 		for (std::size_t i = 0; i < m_events.size(); i++)
 			m_events[i].Patch(j["events"][i]);
 	}
 
-	const Events& GetEvents() const
-	{
-		return m_events;
-	}
-
 private:
-	tString m_fileName;
-
 	uint32_t m_unknown1 = 0;
 	uint8_t m_unknown2  = 0;
 	tString m_unknown3  = TEXT("");
