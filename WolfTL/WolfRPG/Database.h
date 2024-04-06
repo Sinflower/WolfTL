@@ -222,6 +222,8 @@ public:
 		CHECK_JSON_KEY(j, "name", "data");
 		CHECK_JSON_KEY(j, "data", "data");
 
+		m_name = ToUTF16(j["name"]);
+
 		if (m_stringValues.empty() && m_intValues.empty()) return;
 
 		for (std::size_t i = 0; i < m_pFields->size(); i++)
