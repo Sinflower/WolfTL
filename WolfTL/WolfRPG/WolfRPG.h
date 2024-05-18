@@ -39,8 +39,9 @@ namespace fs = std::filesystem;
 class WolfRPG
 {
 public:
-	explicit WolfRPG(const tString& dataPath) :
-		m_dataPath(dataPath)
+	explicit WolfRPG(const tString& dataPath, const bool& skipGD = false) :
+		m_dataPath(dataPath),
+		m_skipGD(skipGD)
 	{
 		try
 		{
@@ -77,9 +78,12 @@ public:
 		checkAndCreateDir(basicDataDir);
 		checkAndCreateDir(mapDataDir);
 
-		std::cout << "Writing Game.dat to file ... ";
-		m_gameDat.Dump(basicDataDir);
-		std::cout << "Done" << std::endl;
+		if (!m_skipGD)
+		{
+			std::cout << "Writing Game.dat to file ... ";
+			m_gameDat.Dump(basicDataDir);
+			std::cout << "Done" << std::endl;
+		}
 
 		std::cout << "Writing CommonEvents to file ... ";
 		m_commonEvents.Dump(basicDataDir);
@@ -153,6 +157,8 @@ private:
 
 	void loadGameDat()
 	{
+		if (m_skipGD) return;
+
 		std::cout << "Loading Game.dat ... " << std::flush;
 
 		m_gameDat = GameDat(m_dataPath + L"/BasicData/Game.dat");
@@ -221,6 +227,7 @@ private:
 
 private:
 	tString m_dataPath;
+	bool m_skipGD;
 
 	GameDat m_gameDat;
 	Maps m_maps;

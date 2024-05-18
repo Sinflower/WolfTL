@@ -48,7 +48,7 @@ public:
 		return m_title;
 	}
 
-	const tString& GetVersion() const
+	const tString& GetTitlePlus() const
 	{
 		return m_titlePlus;
 	}

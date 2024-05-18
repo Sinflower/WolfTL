@@ -36,7 +36,7 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.3.0";
+static const std::string VERSION = "0.3.1";
 
 /*
 TODO:
@@ -52,10 +52,11 @@ class WolfTL
 	inline static const tString PATCHED_DATA = TEXT("/patched/data/");
 
 public:
-	WolfTL(const tString& dataPath, const tString& outputPath) :
+	WolfTL(const tString& dataPath, const tString& outputPath, const bool& skipGD = false) :
 		m_dataPath(dataPath),
 		m_outputPath(outputPath),
-		m_wolf(dataPath)
+		m_wolf(dataPath, skipGD),
+		m_skipGD(skipGD)
 	{
 	}
 
@@ -147,6 +148,8 @@ private:
 
 	void gameDat2Json() const
 	{
+		if (m_skipGD) return;
+
 		std::cout << "Writing GameDat to JSON ... " << std::flush;
 
 		const tString gameDatOutput = std::format(TEXT("{}/{}"), m_outputPath, OUTPUT_DIR);
@@ -214,6 +217,8 @@ private:
 
 	void patchGameDat(const tString& patchFolder)
 	{
+		if (m_skipGD) return;
+
 		std::cout << "Patching GameDat ... " << std::flush;
 
 		const tString gameDatPatch = std::format(TEXT("{}/{}"), patchFolder, OUTPUT_DIR);
@@ -227,6 +232,7 @@ private:
 	tString m_dataPath;
 	tString m_outputPath;
 	WolfRPG m_wolf;
+	bool m_skipGD;
 };
 
 int main(int argc, char* argv[])
@@ -235,11 +241,13 @@ int main(int argc, char* argv[])
 
 	if (argc < 4)
 	{
-		std::cout << "Usage: " << argv[0] << " <DATA-FOLDER> <OUTPUT-FOLDER> <MODE>" << std::endl;
+		std::cout << "Usage: " << argv[0] << " <DATA-FOLDER> <OUTPUT-FOLDER> <MODE> [OPTION]" << std::endl;
 		std::cout << "Modes:" << std::endl;
 		std::cout << "  create    - Create the Patch" << std::endl;
 		std::cout << "  patch     - Apply the Patch" << std::endl;
 		std::cout << "  patch_ip  - Apply the Patch in place, i.e., override the original data files" << std::endl;
+		std::cout << "Options:" << std::endl;
+		std::cout << "  no_gd     - Skip Game.dat" << std::endl;
 		return 0;
 	}
 
@@ -257,6 +265,14 @@ int main(int argc, char* argv[])
 	const tString outputFolder = szArglist[2];
 	tString mode               = szArglist[3];
 
+	bool skipGameDat = false;
+
+	if (argc >= 5)
+	{
+		if (tString(szArglist[4]) == TEXT("no_gd"))
+			skipGameDat = true;
+	}
+
 	// Convert to lowercase
 	std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
 
@@ -264,7 +280,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		WolfTL wolf(dataFolder, outputFolder);
+		WolfTL wolf(dataFolder, outputFolder, skipGameDat);
 		if (mode == TEXT("create"))
 			wolf.ToJson();
 		else if (mode == TEXT("patch"))

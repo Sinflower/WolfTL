@@ -111,7 +111,8 @@ public:
 		m_cryptHeader(cryptHeader),
 		m_mode(mode)
 	{
-		bool isProject = false;
+		bool isProject       = false;
+		const bool isGameDat = (fs::path(fileName).filename() == "Game.dat");
 
 		// If the file extension is .project change the flag
 		if (fs::path(fileName).extension() == ".project")
@@ -153,9 +154,10 @@ public:
 				Bytes data = Read();
 				cryptDat(data, seeds);
 
-				s_isUTF8 = true;
-
 				m_reader.InitData(data);
+
+				if (isGameDat) return;
+
 				m_reader.Skip(5);
 				uint32_t keySize = m_reader.ReadUInt32();
 				int8_t projKey   = m_reader.ReadInt8();
@@ -324,6 +326,11 @@ public:
 		}
 
 		return false;
+	}
+
+	void SetUTF8(const bool& isUTF8)
+	{
+		s_isUTF8 = isUTF8;
 	}
 
 	void Skip(const DWORD& size)

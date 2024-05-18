@@ -56,7 +56,10 @@ public:
 		FileCoder coder(m_fileName, FileCoder::Mode::READ, m_isDB, m_seedIndices);
 
 		if (coder.IsEncrypted())
+		{
 			m_cryptHeader = coder.GetCryptHeader();
+			coder.SetUTF8(m_magic.IsUTF8(m_cryptHeader));
+		}
 		else
 			VERIFY_MAGIC(coder, m_magic);
 

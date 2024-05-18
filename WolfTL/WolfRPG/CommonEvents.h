@@ -46,7 +46,8 @@ public:
 	{
 	}
 
-	explicit CommonEvent(FileCoder& coder) :
+	explicit CommonEvent(FileCoder& coder, const uint32_t& id) :
+		m_id(id),
 		m_valid(false),
 		m_unknown10Valid(false)
 	{
@@ -56,7 +57,7 @@ public:
 	void Dump(FileCoder& coder) const
 	{
 		coder.WriteByte(0x8E);
-		coder.WriteInt(m_id);
+		coder.WriteInt(m_intId);
 		coder.WriteInt(m_unknown1);
 		coder.Write(m_unknown2);
 		coder.WriteString(m_name);
@@ -115,7 +116,7 @@ public:
 	{
 		nlohmann::ordered_json j;
 
-		j["id"]          = m_id;
+		j["id"]          = m_intId;
 		j["name"]        = ToUTF8(m_name);
 		j["description"] = ToUTF8(m_description);
 		j["commands"]    = nlohmann::ordered_json::array();
@@ -140,8 +141,8 @@ public:
 
 		const uint32_t id = j["id"].get<uint32_t>();
 
-		if (id != m_id)
-			throw WolfRPGException(ERROR_TAG + "ID mismatch in patch (expected " + std::to_string(m_id) + ", got " + std::to_string(id) + ")");
+		if (id != m_intId)
+			throw WolfRPGException(ERROR_TAG + "ID mismatch in patch (expected " + std::to_string(m_intId) + ", got " + std::to_string(id) + ")");
 
 		CHECK_JSON_KEY(j, "name", "CommonEvent");
 		CHECK_JSON_KEY(j, "description", "CommonEvent");
@@ -192,7 +193,7 @@ private:
 		if (indicator != 0x8E)
 			throw WolfRPGException(ERROR_TAG + "CommonEvent header indicator not 0x8E (got 0x" + Dec2Hex(indicator) + ")");
 
-		m_id = coder.ReadInt();
+		m_intId = coder.ReadInt();
 
 		m_unknown1 = coder.ReadInt();
 		m_unknown2 = coder.Read(7);
@@ -273,6 +274,7 @@ private:
 	bool m_valid = false;
 
 	uint32_t m_id                       = 0;
+	uint32_t m_intId                    = 0;
 	uint32_t m_unknown1                 = 0;
 	Bytes m_unknown2                    = {};
 	tString m_name                      = TEXT("");
@@ -362,10 +364,7 @@ protected:
 		m_events          = CommonEvent::CommonEvents(eventCnt);
 
 		for (uint32_t i = 0; i < eventCnt; i++)
-		{
-			CommonEvent ev       = CommonEvent(coder);
-			m_events[ev.GetID()] = ev;
-		}
+			m_events[i] = CommonEvent(coder, i);
 
 		m_terminator = coder.ReadByte();
 		if (m_terminator < 0x89)
