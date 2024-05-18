@@ -6,13 +6,16 @@ The data parsing code is based on [Wolf Trans](https://github.com/elizagamedev/w
 ## Usage
 
 ```bash
-WolfTL.exe <DATA-FOLDER> <OUTPUT-FOLDER> <MODE>
+WolfTL.exe <DATA-FOLDER> <OUTPUT-FOLDER> <MODE> [OPTION]
 ```
 
 Possible modes are:<br>
 `create`   - Create the Patch<br>
 `patch`    - Apply the Patch<br>
 `patch_ip` - Apply the Patch in place, i.e., override the original data files
+
+Possible options are:<br>
+`no_gd`    - Skip Game.dat
 
 After creating the Patch, the `OUTPUT-FOLDER` will contain a folder called `dump`, which contains folders for the three types (CommonEvents, Databases, and Maps).
 After applying the Patch, a new folder called `patched` will be created, containing the `data` folder with the updated files inside.
