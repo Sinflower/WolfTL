@@ -68,5 +68,8 @@
     <ClInclude Include="WolfRPG\WolfDataBase.h">
       <Filter>WolfRPG</Filter>
     </ClInclude>
+    <ClInclude Include="WolfRPG\NewWolfCrypt.h">
+      <Filter>WolfRPG</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

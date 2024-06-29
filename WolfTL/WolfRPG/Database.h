@@ -237,7 +237,7 @@ public:
 			CHECK_JSON_KEY(fieldData, "name", dataStr);
 			CHECK_JSON_KEY(fieldData, "value", dataStr);
 
-			if (fieldName != fieldData["name"])
+			if (fieldName != fieldData["name"].get<std::string>())
 				throw WolfRPGException(ERROR_TAG + "Data field name mismatch");
 
 			if (field.IsString())
@@ -572,6 +572,15 @@ public:
 private:
 	bool init()
 	{
+		FileCoder coder(m_datFileName, FileCoder::Mode::READ, true, DAT_SEED_INDICES);
+		if (coder.IsEncrypted())
+			m_cryptHeader = coder.GetCryptHeader();
+		else
+			VERIFY_MAGIC(coder, DAT_MAGIC_NUMBER)
+
+		m_startEndIndicator = coder.ReadByte();
+
+		// Process the project file
 		{
 			FileCoder coder(m_projectFileName, FileCoder::Mode::READ);
 			uint32_t typeCnt = coder.ReadInt();
@@ -581,14 +590,6 @@ private:
 			if (!coder.IsEof())
 				throw WolfRPGException(ERROR_TAGW + L"Database [" + m_projectFileName + L"] has more data than expected");
 		}
-
-		FileCoder coder(m_datFileName, FileCoder::Mode::READ, true, DAT_SEED_INDICES);
-		if (coder.IsEncrypted())
-			m_cryptHeader = coder.GetCryptHeader();
-		else
-			VERIFY_MAGIC(coder, DAT_MAGIC_NUMBER)
-
-		m_startEndIndicator = coder.ReadByte();
 
 		uint32_t typeCnt = coder.ReadInt();
 		if (typeCnt != m_types.size())

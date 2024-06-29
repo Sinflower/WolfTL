@@ -36,7 +36,7 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.3.1";
+static const std::string VERSION = "0.4.0";
 
 /*
 TODO:
@@ -247,7 +247,7 @@ int main(int argc, char* argv[])
 		std::cout << "  patch     - Apply the Patch" << std::endl;
 		std::cout << "  patch_ip  - Apply the Patch in place, i.e., override the original data files" << std::endl;
 		std::cout << "Options:" << std::endl;
-		std::cout << "  no_gd     - Skip Game.dat" << std::endl;
+		std::cout << "  no_gd     - Skip Game.dat (currently always active)" << std::endl;
 		return 0;
 	}
 
@@ -265,13 +265,13 @@ int main(int argc, char* argv[])
 	const tString outputFolder = szArglist[2];
 	tString mode               = szArglist[3];
 
-	bool skipGameDat = false;
+	bool skipGameDat = true;
 
-	if (argc >= 5)
-	{
-		if (tString(szArglist[4]) == TEXT("no_gd"))
-			skipGameDat = true;
-	}
+	//if (argc >= 5)
+	//{
+	//	if (tString(szArglist[4]) == TEXT("no_gd"))
+	//		skipGameDat = true;
+	//}
 
 	// Convert to lowercase
 	std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);

@@ -79,11 +79,14 @@ public:
 			m_commands.push_back(command);
 		}
 
-		VERIFY_MAGIC(coder, COMMANDS_TERMINATOR);
+		m_features = coder.ReadInt();
 
 		m_shadowGraphicNum = coder.ReadByte();
 		m_collisionWidth   = coder.ReadByte();
 		m_collisionHeight  = coder.ReadByte();
+
+		if (m_features > 3)
+			m_pageTransfer = coder.ReadByte();
 
 		uint8_t terminator = coder.ReadByte();
 		if (terminator != 0x7A)
@@ -110,10 +113,14 @@ public:
 		coder.WriteInt(static_cast<uint32_t>(m_commands.size()));
 		for (const Command::CommandShPtr::Command& cmd : m_commands)
 			cmd->Dump(coder);
-		coder.Write(COMMANDS_TERMINATOR);
+		coder.WriteInt(m_features);
 		coder.WriteByte(m_shadowGraphicNum);
 		coder.WriteByte(m_collisionWidth);
 		coder.WriteByte(m_collisionHeight);
+
+		if (m_features > 3)
+			coder.WriteByte(m_pageTransfer);
+
 		coder.WriteByte(0x7A);
 	}
 
@@ -251,11 +258,11 @@ private:
 	uint8_t m_routeFlags         = 0;
 	RouteCommands m_route        = {};
 	Command::Commands m_commands = {};
+	uint32_t m_features          = 0;
 	uint8_t m_shadowGraphicNum   = 0;
 	uint8_t m_collisionWidth     = 0;
 	uint8_t m_collisionHeight    = 0;
-
-	const Bytes COMMANDS_TERMINATOR{ 0x03, 0x00, 0x00, 0x00 };
+	uint8_t m_pageTransfer       = 0;
 };
 
 using Pages = std::vector<Page>;

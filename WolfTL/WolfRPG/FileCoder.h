@@ -27,6 +27,7 @@
 #pragma once
 
 #include "FileAccess.h"
+#include "NewWolfCrypt.h"
 #include "Types.h"
 #include "WolfRPGException.h"
 #include "WolfRPGUtils.h"
@@ -112,11 +113,14 @@ public:
 		m_mode(mode)
 	{
 		bool isProject       = false;
+		bool isMap           = false;
 		const bool isGameDat = (fs::path(fileName).filename() == "Game.dat");
 
 		// If the file extension is .project change the flag
 		if (fs::path(fileName).extension() == ".project")
 			isProject = true;
+		else if (fs::path(fileName).extension() == ".mps")
+			isMap = true;
 
 		if (mode == Mode::READ)
 		{
@@ -124,48 +128,83 @@ public:
 
 			if (!isProject)
 			{
-				if (seedIndices.empty()) return;
+				if (seedIndices.empty() && !isMap) return;
 
-				uint8_t indicator = ReadByte();
-
-				if (isDB)
+				if (m_reader.At(1) == 0x50)
 				{
-					if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
-						return;
+					Bytes data = Read();
+					cryptDatV2(data);
+
+					m_cryptHeader = Bytes(data.begin(), data.begin() + 143);
+
+					m_reader.InitData(data);
+					m_reader.Skip(143);
+
+					s_projKey = m_cryptHeader[0x14];
+				}
+				else if (isMap)
+				{
+					if (m_reader.At(20) != 0x65) return;
+
+					const Bytes header = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x57, 0x4F, 0x4C, 0x46, 0x4D, 0x00, 0x55, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x66 };
+
+					const uint32_t headerSize = static_cast<uint32_t>(header.size());
+
+					m_reader.Seek(headerSize);
+					uint32_t decDataSize = m_reader.ReadUInt32();
+					uint32_t encDataSize = m_reader.ReadUInt32();
+
+					Bytes decData(decDataSize + header.size(), 0);
+
+					lz4Unpack(m_reader.Get(), &decData[headerSize], encDataSize);
+
+					std::memcpy(decData.data(), header.data(), headerSize); // Copy header
+
+					m_reader.InitData(decData);
 				}
 				else
 				{
-					if (indicator == 0x0)
-						return;
+					uint8_t indicator = ReadByte();
+
+					if (isDB)
+					{
+						if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
+							return;
+					}
+					else
+					{
+						if (indicator == 0x0)
+							return;
+					}
+
+					Bytes header(CRYPT_HEADER_SIZE);
+					header[0] = indicator;
+
+					for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
+						header[i] = ReadByte();
+
+					Bytes seeds;
+					for (size_t i = 0; i < seedIndices.size(); i++)
+						seeds.push_back(header[seedIndices[i]]);
+
+					m_cryptHeader = header;
+
+					Bytes data = Read();
+					cryptDatV1(data, seeds);
+
+					m_reader.InitData(data);
+
+					if (isGameDat) return;
+
+					m_reader.Skip(5);
+					uint32_t keySize = m_reader.ReadUInt32();
+					int8_t projKey   = m_reader.ReadInt8();
+
+					if (s_projKey == -1)
+						s_projKey = projKey;
+
+					m_reader.Skip(keySize - 1);
 				}
-
-				Bytes header(CRYPT_HEADER_SIZE);
-				header[0] = indicator;
-
-				for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
-					header[i] = ReadByte();
-
-				Bytes seeds;
-				for (size_t i = 0; i < seedIndices.size(); i++)
-					seeds.push_back(header[seedIndices[i]]);
-
-				m_cryptHeader = header;
-
-				Bytes data = Read();
-				cryptDat(data, seeds);
-
-				m_reader.InitData(data);
-
-				if (isGameDat) return;
-
-				m_reader.Skip(5);
-				uint32_t keySize = m_reader.ReadUInt32();
-				int8_t projKey   = m_reader.ReadInt8();
-
-				if (s_projKey == -1)
-					s_projKey = projKey;
-
-				m_reader.Skip(keySize - 1);
 			}
 			else if (s_projKey != -1)
 			{
@@ -421,7 +460,7 @@ public:
 	}
 
 private:
-	void cryptDat(Bytes& data, const Bytes& seeds)
+	void cryptDatV1(Bytes& data, const Bytes& seeds)
 	{
 		for (std::size_t i = 0; i < seeds.size(); i++)
 		{
@@ -430,6 +469,12 @@ private:
 			for (std::size_t j = 0; j < data.size(); j += DECRYPT_INTERVALS[i])
 				data[j] ^= static_cast<uint8_t>(rand() >> 12);
 		}
+	}
+
+	void cryptDatV2(Bytes& data)
+	{
+		CryptData cd = decryptV2File(data);
+		data.assign(cd.gameDatBytes.begin(), cd.gameDatBytes.end());
 	}
 
 	void cryptProj(Bytes& data)
@@ -461,6 +506,60 @@ private:
 		Bytes sjis(utf8Size + 1, 0);
 		WideCharToMultiByte(932, 0, &utf8[0], (int)utf8.size(), reinterpret_cast<const LPSTR>(sjis.data()), utf8Size, NULL, NULL);
 		return sjis;
+	}
+
+	static void lz4Unpack(const uint8_t* pPacked, uint8_t* pUnpacked, const uint32_t& packSize)
+	{
+		uint32_t upOff = 0;
+		uint32_t pcOff = 0;
+
+		if (pPacked[0] == 0)
+			return;
+
+		while (pcOff < packSize)
+		{
+			uint32_t token = pPacked[pcOff++];
+			uint32_t len   = token >> 4;
+
+			if (len == 0xF)
+			{
+				while (pPacked[pcOff] == 0xFF)
+				{
+					len += 0xFF;
+					pcOff++;
+				}
+
+				len += pPacked[pcOff++];
+			}
+
+			for (uint32_t i = 0; i < len; ++i)
+				pUnpacked[upOff++] = pPacked[pcOff++];
+
+			if (pcOff == packSize)
+				break;
+
+			uint32_t mOff = *reinterpret_cast<const uint16_t*>(&pPacked[pcOff]);
+			pcOff += 2;
+
+			len = (token & 0x0F) + 4;
+
+			if (len == (0xF + 4))
+			{
+				while (pPacked[pcOff] == 0xFF)
+				{
+					len += 0xFF;
+					pcOff++;
+				}
+
+				len += pPacked[pcOff++];
+			}
+
+			for (uint32_t i = 0; i < len; i++)
+			{
+				pUnpacked[upOff] = pUnpacked[upOff - mOff];
+				upOff++;
+			}
+		}
 	}
 
 private:
