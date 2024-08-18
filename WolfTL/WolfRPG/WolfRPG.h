@@ -76,7 +76,9 @@ public:
 		tString mapDataDir   = outputPath + L"/MapData/";
 
 		checkAndCreateDir(basicDataDir);
-		checkAndCreateDir(mapDataDir);
+
+		if (!m_maps.empty())
+			checkAndCreateDir(mapDataDir);
 
 		if (!m_skipGD)
 		{
@@ -168,6 +170,12 @@ private:
 
 	void loadMaps()
 	{
+		if (!fs::exists(m_dataPath + L"/MapData/"))
+		{
+			std::cout << "MapData directory not found. Skipping Maps ..." << std::endl;
+			return;
+		}
+
 		std::cout << "Loading Maps ... " << std::flush;
 
 		size_t prevLength = 0;
