@@ -53,6 +53,8 @@ public:
 		if (m_fileName.empty())
 			throw WolfRPGException(ERROR_TAG + "Trying to load with empty filename");
 
+		g_activeFile = ::GetFileName(m_fileName);
+
 		FileCoder coder(m_fileName, FileCoder::Mode::READ, m_isDB, m_seedIndices);
 
 		if (coder.IsEncrypted())
@@ -68,14 +70,19 @@ public:
 
 	void Dump(const tString& outputDir) const
 	{
-		tString outputFN = outputDir + L"/" + ::GetFileName(m_fileName);
+		const tString fileName = ::GetFileName(m_fileName);
+		g_activeFile           = fileName;
+		tString outputFN       = outputDir + L"/" + fileName;
 		FileCoder coder(outputFN, FileCoder::Mode::WRITE, m_isDB, m_seedIndices);
 		dump(coder);
 	}
 
 	virtual void ToJson(const tString& outputFolder) const
 	{
-		const tString outputFile = std::format(TEXT("{}/{}.json"), outputFolder, ::GetFileNameNoExt(m_fileName));
+		const tString fileName = ::GetFileNameNoExt(m_fileName);
+		g_activeFile           = fileName;
+
+		const tString outputFile = std::format(TEXT("{}/{}.json"), outputFolder, fileName);
 
 		std::ofstream out(outputFile);
 		out << toJson().dump(4);
@@ -85,7 +92,10 @@ public:
 
 	virtual void Patch(const tString& patchFolder)
 	{
-		const tString patchFile = patchFolder + L"/" + ::GetFileNameNoExt(m_fileName) + L".json";
+		const tString fileName = ::GetFileNameNoExt(m_fileName);
+		g_activeFile           = fileName;
+
+		const tString patchFile = patchFolder + L"/" + fileName + L".json";
 		if (!fs::exists(patchFile))
 			throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFile);
 

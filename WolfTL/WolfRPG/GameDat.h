@@ -108,7 +108,7 @@ protected:
 		m_fileSize = coder.ReadInt();
 
 		if (m_fileSize != m_oldSize)
-			throw WolfRPGException(ERROR_TAG + std::format("Game.dat has different size than expected - {} vs {}", m_fileSize, m_oldSize));
+			throw WolfRPGException(ERROR_TAG + std::format("Game.dat has different size than expected - expected: {} - got: {}", m_fileSize, m_oldSize));
 
 		m_unknown2 = coder.Read();
 

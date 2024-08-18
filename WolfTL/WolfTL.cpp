@@ -36,12 +36,34 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.4.0";
+static const std::string VERSION = "0.4.1";
 
 /*
 TODO:
  - Add an option to ignore the name sanity check in the data patching
+ - Rewrite error messages to use std::format
 */
+
+// From: https://stackoverflow.com/a/45588456
+class MBuf : public std::stringbuf
+{
+public:
+	int sync()
+	{
+		fputs(str().c_str(), stdout);
+		str("");
+		return 0;
+	}
+};
+
+static MBuf g_buf;
+
+void EnableUTF8Print()
+{
+	SetConsoleOutputCP(CP_UTF8);
+	setvbuf(stdout, nullptr, _IONBF, 0);
+	std::cout.rdbuf(&g_buf);
+}
 
 class WolfTL
 {
@@ -237,6 +259,8 @@ private:
 
 int main(int argc, char* argv[])
 {
+	EnableUTF8Print();
+
 	std::cout << "WolfTL v" << VERSION << std::endl;
 
 	if (argc < 4)
@@ -267,11 +291,11 @@ int main(int argc, char* argv[])
 
 	bool skipGameDat = true;
 
-	//if (argc >= 5)
+	// if (argc >= 5)
 	//{
 	//	if (tString(szArglist[4]) == TEXT("no_gd"))
 	//		skipGameDat = true;
-	//}
+	// }
 
 	// Convert to lowercase
 	std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
@@ -292,7 +316,9 @@ int main(int argc, char* argv[])
 	}
 	catch (const std::exception& e)
 	{
-		std::wcerr << e.what() << std::endl;
+		std::wcerr << std::endl
+				   << "Error while processing: " << g_activeFile << std::endl
+				   << e.what() << std::endl;
 	}
 
 	return 0;

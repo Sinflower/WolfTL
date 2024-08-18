@@ -237,8 +237,10 @@ public:
 			CHECK_JSON_KEY(fieldData, "name", dataStr);
 			CHECK_JSON_KEY(fieldData, "value", dataStr);
 
-			if (fieldName != fieldData["name"].get<std::string>())
-				throw WolfRPGException(ERROR_TAG + "Data field name mismatch");
+			const std::string fieldNameJson = fieldData["name"].get<std::string>();
+
+			if (fieldName != fieldNameJson)
+				throw WolfRPGException(ERROR_TAG + "Data field name mismatch - Expected: \"" + fieldName + "\" - Got: \"" + fieldNameJson + "\"");
 
 			if (field.IsString())
 				m_stringValues[field.Index()] = ToUTF16(fieldData["value"].get<std::string>());
@@ -453,13 +455,13 @@ public:
 		m_description = ToUTF16(j["description"].get<std::string>());
 
 		if (m_fields.size() != j["fields"].size())
-			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'fields'");
+			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'fields' expected: " + std::to_string(m_fields.size()) + " - got: " + std::to_string(j["fields"].size()));
 
 		for (std::size_t i = 0; i < m_fields.size(); i++)
 			m_fields[i].Patch(j["fields"][i]);
 
 		if (m_data.size() != j["data"].size())
-			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'data'");
+			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'data' expected: " + std::to_string(m_data.size()) + " - got: " + std::to_string(j["data"].size()));
 
 		for (std::size_t i = 0; i < m_data.size(); i++)
 			m_data[i].Patch(j["data"][i]);
@@ -490,6 +492,7 @@ private:
 
 using Types = std::vector<Type>;
 
+// TODO: Why not derive from WolfDataBase?
 class Database
 {
 public:
@@ -503,14 +506,20 @@ public:
 	void Dump(const tString& outputDir) const
 	{
 		{
-			tString outputFN = outputDir + L"/" + GetFileName(m_projectFileName);
+			const tString fileName = ::GetFileName(m_projectFileName);
+			g_activeFile           = fileName;
+
+			tString outputFN = outputDir + L"/" + fileName;
 			FileCoder coder(outputFN, FileCoder::Mode::WRITE);
 			coder.WriteInt(m_types.size());
 			for (const Type& type : m_types)
 				type.DumpProject(coder);
 		}
 
-		tString outputFN = outputDir + L"/" + GetFileName(m_datFileName);
+		const tString fileName = ::GetFileName(m_datFileName);
+		g_activeFile           = fileName;
+
+		tString outputFN = outputDir + L"/" + fileName;
 		FileCoder coder(outputFN, FileCoder::Mode::WRITE, true, DAT_SEED_INDICES);
 		coder.Write(DAT_MAGIC_NUMBER);
 
@@ -525,13 +534,16 @@ public:
 
 	void ToJson(const tString& outputFolder) const
 	{
+		const tString fileName = ::GetFileNameNoExt(m_datFileName);
+		g_activeFile           = fileName;
+
 		nlohmann::ordered_json j;
 		j["types"] = nlohmann::json::array();
 
 		for (const Type& type : m_types)
 			j["types"].push_back(type.ToJson());
 
-		const tString outputFile = outputFolder + L"/" + ::GetFileNameNoExt(m_datFileName) + L".json";
+		const tString outputFile = outputFolder + L"/" + fileName + L".json";
 
 		std::ofstream out(outputFile);
 		out << j.dump(4);
@@ -541,7 +553,10 @@ public:
 
 	void Patch(const tString& patchFolder)
 	{
-		const tString patchFile = patchFolder + L"/" + ::GetFileNameNoExt(m_datFileName) + L".json";
+		const tString fileName = ::GetFileNameNoExt(m_datFileName);
+		g_activeFile           = fileName;
+
+		const tString patchFile = patchFolder + L"/" + fileName + L".json";
 		if (!fs::exists(patchFile))
 			throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFile);
 
@@ -553,7 +568,7 @@ public:
 		CHECK_JSON_KEY(j, "types", "Database");
 
 		if (m_types.size() != j["types"].size())
-			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'types'");
+			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'types' expected: " + std::to_string(m_types.size()) + " - got: " + std::to_string(j["types"].size()));
 
 		for (std::size_t i = 0; i < m_types.size(); i++)
 			m_types[i].Patch(j["types"][i]);
@@ -594,7 +609,7 @@ private:
 		uint32_t typeCnt = coder.ReadInt();
 		if (typeCnt != m_types.size())
 		{
-			throw WolfRPGException(ERROR_TAGW + L"Database [" + m_datFileName + L"] project and dat type count mismatch (" + std::to_wstring(m_types.size()) + L" vs. " + std::to_wstring(typeCnt) + L")");
+			throw WolfRPGException(ERROR_TAGW + L"Database [" + m_datFileName + L"] project and dat type count mismatch expected: " + std::to_wstring(m_types.size()) + L"  - got: " + std::to_wstring(typeCnt));
 			return false;
 		}
 

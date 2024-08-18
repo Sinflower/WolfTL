@@ -175,3 +175,5 @@ static inline tString EscapePath(tString path)
 
 	return path;
 }
+
+extern tString g_activeFile = L"";

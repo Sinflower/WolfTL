@@ -54,8 +54,9 @@ public:
 		}
 		catch (WolfRPGException& e)
 		{
-			std::cerr << std::endl
-					  << e.what() << std::endl;
+			std::wcerr << std::endl
+					   << "Error while processing: " << g_activeFile << std::endl
+					   << e.what() << std::endl;
 		}
 	}
 
