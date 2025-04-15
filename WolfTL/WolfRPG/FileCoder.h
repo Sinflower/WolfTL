@@ -144,7 +144,7 @@ public:
 				}
 				else if (isMap)
 				{
-					if (m_reader.At(20) != 0x65) return;
+					if (m_reader.At(20) < 0x65) return;
 
 					const Bytes header = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x57, 0x4F, 0x4C, 0x46, 0x4D, 0x00, 0x55, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x66 };
 
@@ -168,6 +168,23 @@ public:
 
 					if (isDB)
 					{
+						if (m_reader.At(10) == 0xC4)
+						{
+							m_reader.Seek(11);
+							uint32_t decDataSize = m_reader.ReadUInt32();
+							uint32_t encDataSize = m_reader.ReadUInt32();
+
+							Bytes decData(decDataSize + 11, 0);
+
+							lz4Unpack(m_reader.Get(), &decData[11], encDataSize);
+							m_reader.Seek(0);
+							std::memcpy(decData.data(), m_reader.Get(), 11); // Copy header
+
+							m_reader.InitData(decData);
+							m_reader.Seek(1);
+							return;
+						}
+
 						if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
 							return;
 					}

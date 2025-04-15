@@ -520,6 +520,7 @@ using Picture = std::shared_ptr<CommandSpecialClasses::Picture>;
 
 inline CommandShPtr::Command Command::Command::Init(FileCoder& coder)
 {
+	CommandShPtr::Command cmd = nullptr;
 	uint8_t argsCount = coder.ReadByte() - 1;
 	CommandType cid   = static_cast<CommandType>(coder.ReadInt());
 	uInts args;
@@ -537,19 +538,31 @@ inline CommandShPtr::Command Command::Command::Init(FileCoder& coder)
 
 	uint8_t terminator = coder.ReadByte();
 	if (terminator == 0x01)
-		return std::make_shared<CommandSpecialClasses::Move>(cid, args, stringArgs, indent, coder);
+		cmd = std::make_shared<CommandSpecialClasses::Move>(cid, args, stringArgs, indent, coder);
 	else if (terminator != TERMINATOR)
 		throw WolfRPGException(ERROR_TAG + "Unexpected command terminator: " + std::to_string(terminator));
-
-	switch (cid)
+	else
 	{
-		case CommandType::Picture:
-			return std::make_shared<CommandSpecialClasses::Picture>(cid, args, stringArgs, indent);
-		case CommandType::Move:
-			return std::make_shared<CommandSpecialClasses::Move>(cid, args, stringArgs, indent, coder);
-		default:
-			return std::make_shared<Command>(cid, args, stringArgs, indent);
+		switch (cid)
+		{
+			case CommandType::Picture:
+				cmd = std::make_shared<CommandSpecialClasses::Picture>(cid, args, stringArgs, indent);
+				break;
+			case CommandType::Move:
+				cmd = std::make_shared<CommandSpecialClasses::Move>(cid, args, stringArgs, indent, coder);
+				break;
+			default:
+				cmd = std::make_shared<Command>(cid, args, stringArgs, indent);
+				break;
+		}
 	}
+
+	uint8_t unknown = coder.ReadByte();
+
+	if (unknown != 0x0)
+		throw WolfRPGException(ERROR_TAG + "Unexpected command unknown byte: " + std::to_string(unknown));
+
+	return cmd;
 }
 
 static const tStrings stringsOfCommand(const CommandShPtr::Command& command)
