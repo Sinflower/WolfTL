@@ -191,7 +191,7 @@ private:
 	{
 		uint8_t indicator = coder.ReadByte();
 		if (indicator != 0x8E)
-			throw WolfRPGException(ERROR_TAG + "CommonEvent header indicator not 0x8E (got 0x" + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(ERROR_TAG + "CommonEvent header indicator not 0x8E (got " + Dec2Hex(indicator) + ")");
 
 		m_intId = coder.ReadInt();
 

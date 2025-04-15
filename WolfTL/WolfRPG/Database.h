@@ -587,6 +587,7 @@ public:
 private:
 	bool init()
 	{
+		g_activeFile = ::GetFileName(m_datFileName);
 		FileCoder coder(m_datFileName, FileCoder::Mode::READ, true, DAT_SEED_INDICES);
 		if (coder.IsEncrypted())
 			m_cryptHeader = coder.GetCryptHeader();
@@ -597,6 +598,7 @@ private:
 
 		// Process the project file
 		{
+			g_activeFile = ::GetFileName(m_projectFileName);
 			FileCoder coder(m_projectFileName, FileCoder::Mode::READ);
 			uint32_t typeCnt = coder.ReadInt();
 			for (uint32_t i = 0; i < typeCnt; i++)

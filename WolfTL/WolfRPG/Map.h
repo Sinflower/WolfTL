@@ -90,7 +90,7 @@ public:
 
 		uint8_t terminator = coder.ReadByte();
 		if (terminator != 0x7A)
-			throw WolfRPGException(ERROR_TAG + "Page terminator not 0x7A (found: 0x" + Dec2Hex(terminator) + ")");
+			throw WolfRPGException(ERROR_TAG + "Page terminator not 0x7A (found: " + Dec2Hex(terminator) + ")");
 
 		return true;
 	}
