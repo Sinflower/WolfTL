@@ -191,10 +191,14 @@ public:
 			coder.WriteString(arg);
 	}
 
-	virtual void Dump(FileCoder& coder) const
+	void Dump(FileCoder& coder) const
 	{
 		DumpData(coder);
 		DumpTerminator(coder);
+
+		// v3.5 has a final 0x0 terminator, no idea if this changes in the future, but for now it is fixed at 0x0
+		if (s_v35)
+			coder.WriteByte(0);
 	}
 
 	virtual nlohmann::ordered_json ToJson() const
@@ -537,12 +541,6 @@ public:
 
 			m_route.push_back(rc);
 		}
-	}
-
-	virtual void Dump(FileCoder& coder) const
-	{
-		DumpData(coder);
-		DumpTerminator(coder);
 	}
 
 	virtual void DumpTerminator(FileCoder& coder) const

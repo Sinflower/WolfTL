@@ -91,6 +91,9 @@ public:
 
 	void Dump(const tString& outputDir) const
 	{
+		// Reset the static variable for Command
+		Command::Command::s_v35 = false;
+
 		const tString fileName = ::GetFileName(m_fileName);
 		g_activeFile           = fileName;
 		tString outputFN       = outputDir + L"/" + fileName;

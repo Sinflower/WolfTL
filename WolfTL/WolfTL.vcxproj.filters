@@ -19,10 +19,19 @@
     <Filter Include="3rdParty">
       <UniqueIdentifier>{de8d292d-5798-471b-8766-6aed512168c9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="3rdParty\nlohmann">
+      <UniqueIdentifier>{ab9efe6c-a469-43d3-b8ad-4f941c275866}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3rdParty\lz4">
+      <UniqueIdentifier>{a8c25797-2bbc-43e4-a6b9-ff2adf75bf88}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WolfTL.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="3rdParty\lz4\lz4.c">
+      <Filter>3rdParty\lz4</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -59,9 +68,6 @@
     <ClInclude Include="WolfRPG\WolfRPGUtils.h">
       <Filter>WolfRPG</Filter>
     </ClInclude>
-    <ClInclude Include="3rdParty\nlohmann\json.hpp">
-      <Filter>3rdParty</Filter>
-    </ClInclude>
     <ClInclude Include="WolfRPG\FileAccess.h">
       <Filter>WolfRPG</Filter>
     </ClInclude>
@@ -70,6 +76,12 @@
     </ClInclude>
     <ClInclude Include="WolfRPG\NewWolfCrypt.h">
       <Filter>WolfRPG</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\nlohmann\json.hpp">
+      <Filter>3rdParty\nlohmann</Filter>
+    </ClInclude>
+    <ClInclude Include="3rdParty\lz4\lz4.h">
+      <Filter>3rdParty\lz4</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

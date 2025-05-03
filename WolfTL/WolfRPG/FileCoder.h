@@ -36,6 +36,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <lz4/lz4.h>
 
 // TODO:
 // - Create Wrapper class for reader / writer to have mode independent access object
@@ -156,6 +157,14 @@ public:
 		load();
 	}
 
+	FileCoder(const Mode& mode, const WolfFileType& fileType) :
+		m_mode(mode),
+		m_fileType(fileType)
+	{
+		if (mode == Mode::READ)
+			throw WolfRPGException(ERROR_TAG + "FileCoder: READ mode requires a filename or buffer.");
+	}
+
 	void Unpack(const bool& seekBack = false)
 	{
 		const uint32_t startOffset = m_reader.GetOffset();
@@ -164,7 +173,12 @@ public:
 
 		Bytes decData(decDataSize + startOffset, 0);
 
-		lz4Unpack(m_reader.Get(), &decData[startOffset], encDataSize);
+		//lz4Unpack(m_reader.Get(), &decData[startOffset], encDataSize);
+		int32_t decSize = LZ4_decompress_safe(reinterpret_cast<const char*>(m_reader.Get()), reinterpret_cast<char*>(&decData[startOffset]), encDataSize, decDataSize);
+
+		if (decSize < 0)
+			throw WolfRPGException(ERROR_TAG + "LZ4 decompression failed.");
+
 		m_reader.Seek(0);
 		std::memcpy(decData.data(), m_reader.Get(), startOffset); // Copy header
 
@@ -172,6 +186,22 @@ public:
 
 		if (seekBack)
 			m_reader.Seek(startOffset);
+	}
+
+	void Pack()
+	{
+		const uint32_t dataSize = static_cast<uint32_t>(m_writer.GetSize());
+		std::vector<uint8_t> encData(dataSize, 0);
+		int32_t encSize = LZ4_compress_default(reinterpret_cast<const char*>(m_writer.Get()), reinterpret_cast<char*>(encData.data()), dataSize, dataSize);
+		if (encSize < 0)
+			throw WolfRPGException(ERROR_TAG + "LZ4 compression failed.");
+
+		encData.resize(encSize);
+		m_writer.Clear();
+
+		m_writer.Write(dataSize);
+		m_writer.Write(encSize);
+		m_writer.Write(encData);
 	}
 
 	~FileCoder()
@@ -388,6 +418,11 @@ public:
 			WriteString(str);
 	}
 
+	void WriteCoder(const FileCoder& coder)
+	{
+		m_writer.Write(coder.m_writer.GetBuffer());
+	}
+
 	static bool IsUTF8()
 	{
 		return s_isUTF8;
@@ -450,60 +485,6 @@ private:
 		return sjis;
 	}
 
-	static void lz4Unpack(const uint8_t* pPacked, uint8_t* pUnpacked, const uint32_t& packSize)
-	{
-		uint32_t upOff = 0;
-		uint32_t pcOff = 0;
-
-		if (pPacked[0] == 0)
-			return;
-
-		while (pcOff < packSize)
-		{
-			uint32_t token = pPacked[pcOff++];
-			uint32_t len   = token >> 4;
-
-			if (len == 0xF)
-			{
-				while (pPacked[pcOff] == 0xFF)
-				{
-					len += 0xFF;
-					pcOff++;
-				}
-
-				len += pPacked[pcOff++];
-			}
-
-			for (uint32_t i = 0; i < len; i++)
-				pUnpacked[upOff++] = pPacked[pcOff++];
-
-			if (pcOff == packSize)
-				break;
-
-			uint32_t mOff = *reinterpret_cast<const uint16_t*>(&pPacked[pcOff]);
-			pcOff += 2;
-
-			len = (token & 0x0F) + 4;
-
-			if (len == (0xF + 4))
-			{
-				while (pPacked[pcOff] == 0xFF)
-				{
-					len += 0xFF;
-					pcOff++;
-				}
-
-				len += pPacked[pcOff++];
-			}
-
-			for (uint32_t i = 0; i < len; i++)
-			{
-				pUnpacked[upOff] = pUnpacked[upOff - mOff];
-				upOff++;
-			}
-		}
-	}
-
 	void load()
 	{
 		if (m_fileType == WolfFileType::Project)
@@ -536,11 +517,8 @@ private:
 		{
 			if (m_reader.At(20) < 0x65) return;
 
-			const Bytes header = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x57, 0x4F, 0x4C, 0x46, 0x4D, 0x00, 0x55, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x66 };
-
-			const uint32_t headerSize = static_cast<uint32_t>(header.size());
-
-			m_reader.Seek(headerSize);
+			// The first 25 bytes are the header -- TODO: remove magic numbers (here and elsewhere)
+			m_reader.Seek(25);
 			Unpack();
 		}
 		else
@@ -597,9 +575,9 @@ private:
 	}
 
 private:
-	Bytes m_cryptHeader;
+	Bytes m_cryptHeader = {};
 	Mode m_mode;
-	uInts m_seedIndices;
+	uInts m_seedIndices = {};
 	WolfFileType m_fileType;
 
 	FileReader m_reader = {};

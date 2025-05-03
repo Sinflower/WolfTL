@@ -415,7 +415,7 @@ public:
 protected:
 	bool load(FileCoder& coder)
 	{
-		m_unknown1 = coder.ReadInt();
+		m_version  = coder.ReadInt();
 		m_unknown2 = coder.ReadByte();
 		m_unknown3 = coder.ReadString();
 
@@ -425,7 +425,7 @@ protected:
 
 		uint32_t eventCount = coder.ReadInt();
 
-		if (m_unknown1 >= 0x67)
+		if (m_version >= 0x67)
 		{
 			m_unknown4 = coder.ReadInt();
 			m_unknown5 = coder.ReadInt();
@@ -448,7 +448,7 @@ protected:
 			m_tiles = coder.Read(m_width * m_height * 3 * 4);
 
 		uint8_t indicator = 0x0;
-		while ((indicator = coder.ReadByte()) == 0x6F)
+		while ((indicator = coder.ReadByte()) == EVENT_INDICATOR)
 		{
 			Event ev;
 			if (!ev.Init(coder))
@@ -460,7 +460,7 @@ protected:
 		if (m_events.size() != eventCount)
 			throw WolfRPGException(ERROR_TAG + "Expected " + std::to_string(eventCount) + " Events, but read: " + std::to_string(m_events.size()) + " Events");
 
-		if (indicator != 0x66)
+		if (indicator != TERMINATOR)
 			throw WolfRPGException(ERROR_TAG + "Unexpected event indicator: " + Dec2Hex(indicator) + " expected 0x66");
 
 		if (!coder.IsEof())
@@ -471,28 +471,54 @@ protected:
 
 	void dump(FileCoder& coder) const
 	{
+		FileCoder* pCoder = &coder;
+		// For v3.5 we need to compress the actual data before writing it to the file.
+		// Therefore, we create a temporary buffer-based file coder to write the data to.
+		FileCoder bufCoder = FileCoder(FileCoder::Mode::WRITE, m_fileType);
+
 		coder.Write(MAGIC_NUMBER);
 
-		coder.WriteInt(m_unknown1);
+		coder.WriteInt(m_version);
 		coder.WriteByte(m_unknown2);
-		coder.WriteString(m_unknown3);
 
-		coder.WriteInt(m_tilesetID);
-		coder.WriteInt(m_width);
-		coder.WriteInt(m_height);
-		coder.WriteInt(static_cast<uint32_t>(m_events.size()));
+		////////
+		if (m_version >= 0x67)
+		{
+			Command::Command::s_v35 = true;
+			pCoder                  = &bufCoder;
+		}
+
+		pCoder->WriteString(m_unknown3);
+
+		pCoder->WriteInt(m_tilesetID);
+		pCoder->WriteInt(m_width);
+		pCoder->WriteInt(m_height);
+		pCoder->WriteInt(static_cast<uint32_t>(m_events.size()));
+
+		if (m_version >= 0x67)
+		{
+			pCoder->WriteInt(m_unknown4);
+			pCoder->WriteInt(m_unknown5);
+		}
 
 		if (FileCoder::IsUTF8() && m_tiles.empty())
-			coder.WriteInt(0xFFFFFFFF);
+			pCoder->WriteInt(0xFFFFFFFF);
 		else
-			coder.Write(m_tiles);
+			pCoder->Write(m_tiles);
 
 		for (Event event : m_events)
 		{
-			coder.WriteByte(0x6F);
-			event.Dump(coder);
+			pCoder->WriteByte(EVENT_INDICATOR);
+			event.Dump(*pCoder);
 		}
-		coder.WriteByte(0x66);
+
+		pCoder->WriteByte(TERMINATOR);
+
+		if (m_version >= 0x67)
+		{
+			bufCoder.Pack();
+			coder.WriteCoder(bufCoder);
+		}
 	}
 
 	nlohmann::ordered_json toJson() const
@@ -513,7 +539,7 @@ protected:
 	}
 
 private:
-	uint32_t m_unknown1 = 0;
+	uint32_t m_version  = 0;
 	uint8_t m_unknown2  = 0;
 	tString m_unknown3  = TEXT("");
 	uint32_t m_unknown4 = 0;
@@ -528,6 +554,8 @@ private:
 	inline static const MagicNumber MAGIC_NUMBER{ { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 													0x57, 0x4F, 0x4C, 0x46, 0x4D, 0x00, 0x00, 0x00, 0x00, 0x00 },
 												  16 };
+	static const uint8_t EVENT_INDICATOR = 0x6F;
+	static const uint8_t TERMINATOR      = 0x66;
 };
 
 using Maps = std::vector<Map>;

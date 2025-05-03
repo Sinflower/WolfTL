@@ -521,15 +521,26 @@ public:
 
 		tString outputFN = outputDir + L"/" + fileName;
 		FileCoder coder(outputFN, FileCoder::Mode::WRITE, WolfFileType::DataBase, DAT_SEED_INDICES);
+		FileCoder bufCoder(FileCoder::Mode::WRITE, WolfFileType::DataBase);
+		FileCoder* pCoder = &coder;
+
 		coder.Write(DAT_MAGIC_NUMBER);
+		coder.WriteByte(m_version);
 
-		coder.WriteByte(m_startEndIndicator);
+		if (m_version == 0xC4)
+			pCoder = &bufCoder;
 
-		coder.WriteInt(m_types.size());
+		pCoder->WriteInt(m_types.size());
 		for (const Type& type : m_types)
-			type.DumpDat(coder);
+			type.DumpDat(*pCoder);
 
-		coder.WriteByte(m_startEndIndicator);
+		pCoder->WriteByte(m_version);
+
+		if (m_version == 0xC4)
+		{
+			bufCoder.Pack();
+			coder.WriteCoder(bufCoder);
+		}
 	}
 
 	void ToJson(const tString& outputFolder) const
@@ -594,7 +605,7 @@ private:
 		else
 			VERIFY_MAGIC(coder, DAT_MAGIC_NUMBER)
 
-		m_startEndIndicator = coder.ReadByte();
+		m_version = coder.ReadByte();
 
 		// Process the project file
 		{
@@ -626,8 +637,8 @@ private:
 			}
 		}
 
-		if (coder.ReadByte() != m_startEndIndicator)
-			throw WolfRPGException(ERROR_TAGW + L"No " + Dec2HexW(m_startEndIndicator) + L" terminator at the end of \"" + m_datFileName + L"\"");
+		if (coder.ReadByte() != m_version)
+			throw WolfRPGException(ERROR_TAGW + L"No " + Dec2HexW(m_version) + L" terminator at the end of \"" + m_datFileName + L"\"");
 
 		if (!coder.IsEof())
 			throw WolfRPGException(ERROR_TAGW + L"Database [" + m_datFileName + L"] has more data than expected");
@@ -639,8 +650,8 @@ private:
 	Types m_types       = {};
 	Bytes m_cryptHeader = {};
 
-	BYTE m_startEndIndicator = 0;
-	bool m_valid             = false;
+	BYTE m_version = 0;
+	bool m_valid   = false;
 	tString m_projectFileName;
 	tString m_datFileName;
 

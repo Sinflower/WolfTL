@@ -388,6 +388,11 @@ public:
 		return m_buffer.data();
 	}
 
+	const std::vector<BYTE>& GetBuffer() const
+	{
+		return m_buffer;
+	}
+
 	void SetAt(const uint64_t& offset, const BYTE& value)
 	{
 		if (offset < m_buffer.size())
@@ -399,6 +404,15 @@ public:
 	const uint64_t& GetSize() const
 	{
 		return m_size;
+	}
+
+	void Clear()
+	{
+		if (!m_bufferMode)
+			throw(FileWriterException("Clear: FileWriter not in buffer mode"));
+
+		m_buffer.clear();
+		m_size = 0;
 	}
 
 	void WriteToFile(const std::string& filename)

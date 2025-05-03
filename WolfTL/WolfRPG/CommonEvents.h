@@ -359,11 +359,13 @@ public:
 protected:
 	bool load(FileCoder& coder)
 	{
-		m_startIndicator = coder.ReadByte();
+		m_version = coder.ReadByte();
 
-		if (m_startIndicator == 0x93 || m_startIndicator == 0xCC)
+		if (m_version == 0x93 || m_version == 0xCC)
 		{
 			Command::Command::s_v35 = true;
+
+			m_v35 = true;
 			coder.Unpack(true);
 		}
 
@@ -385,14 +387,31 @@ protected:
 
 	void dump(FileCoder& coder) const
 	{
-		coder.Write(MAGIC_NUMBER);
+		FileCoder* pCoder = &coder;
+		// For v3.5 we need to compress the actual data before writing it to the file.
+		// Therefore, we create a temporary buffer-based file coder to write the data to.
+		FileCoder bufCoder = FileCoder(FileCoder::Mode::WRITE, m_fileType);
 
-		coder.WriteByte(m_startIndicator);
-		coder.WriteInt(m_events.size());
+		pCoder->Write(MAGIC_NUMBER);
+		pCoder->WriteByte(m_version);
+
+		if (m_v35)
+		{
+			Command::Command::s_v35 = true;
+			pCoder                  = &bufCoder;
+		}
+
+		pCoder->WriteInt(m_events.size());
 		for (const CommonEvent& ev : m_events)
-			ev.Dump(coder);
+			ev.Dump(*pCoder);
 
-		coder.WriteByte(m_terminator);
+		pCoder->WriteByte(m_terminator);
+
+		if (m_v35)
+		{
+			bufCoder.Pack();
+			coder.WriteCoder(bufCoder);
+		}
 	}
 
 	nlohmann::ordered_json toJson() const
@@ -409,8 +428,10 @@ private:
 
 	CommonEvent::CommonEvents m_events = {};
 
-	BYTE m_startIndicator = 0;
-	BYTE m_terminator     = 0;
+	BYTE m_version    = 0;
+	BYTE m_terminator = 0;
+
+	bool m_v35 = false;
 
 	inline static const uInts SEED_INDICES{ 0, 3, 9 };
 	inline static const MagicNumber MAGIC_NUMBER = { { 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x43, 0x00 }, 5 };

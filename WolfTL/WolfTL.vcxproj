@@ -139,9 +139,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="3rdParty\lz4\lz4.c" />
     <ClCompile Include="WolfTL.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="3rdParty\lz4\lz4.h" />
     <ClInclude Include="3rdParty\nlohmann\json.hpp" />
     <ClInclude Include="WolfRPG\NewWolfCrypt.h" />
     <ClInclude Include="WolfRPG\Command.h" />
