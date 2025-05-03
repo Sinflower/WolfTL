@@ -57,3 +57,14 @@ using tStrings = std::vector<tString>;
 	T(T const &)               = delete; \
 	void operator=(T const &t) = delete; \
 	T(T &&)                    = delete;
+
+enum class WolfFileType
+{
+	GameDat,
+	CommonEvent,
+	DataBase,
+	Project,
+	Map,
+	TileSetData,
+	None
+};

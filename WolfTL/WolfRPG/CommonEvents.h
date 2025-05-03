@@ -298,13 +298,13 @@ class CommonEvents : public WolfDataBase
 {
 public:
 	CommonEvents() :
-		WolfDataBase(TEXT(""), MAGIC_NUMBER),
+		WolfDataBase(TEXT(""), MAGIC_NUMBER, WolfFileType::CommonEvent),
 		m_valid(false)
 	{
 	}
 
 	explicit CommonEvents(const tString& fileName) :
-		WolfDataBase(fileName, MAGIC_NUMBER, false, SEED_INDICES),
+		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::CommonEvent, SEED_INDICES),
 		m_valid(false)
 	{
 		if (!fileName.empty())
@@ -359,7 +359,14 @@ public:
 protected:
 	bool load(FileCoder& coder)
 	{
-		m_startIndicator  = coder.ReadByte();
+		m_startIndicator = coder.ReadByte();
+
+		if (m_startIndicator == 0x93 || m_startIndicator == 0xCC)
+		{
+			Command::Command::s_v35 = true;
+			coder.Unpack(true);
+		}
+
 		uint32_t eventCnt = coder.ReadInt();
 		m_events          = CommonEvent::CommonEvents(eventCnt);
 

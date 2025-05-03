@@ -39,13 +39,11 @@
 #include <sstream>
 #include <string>
 
-namespace fs = std::filesystem;
-
-static inline std::string BuildErrorTag(const std::source_location& location)
+inline std::string BuildErrorTag(const std::source_location& location)
 {
 	std::string function = location.function_name();
 	// Only keep the file name
-	const std::string file = fs::path(location.file_name()).filename().string();
+	const std::string file = std::filesystem::path(location.file_name()).filename().string();
 
 	// Remove the parameters from the function name
 	std::size_t pos = function.find('(');
@@ -60,13 +58,13 @@ static inline std::string BuildErrorTag(const std::source_location& location)
 	return std::format("[{}:{} - {}()] ", file, location.line(), function);
 }
 
-static inline std::wstring BuildErrorTagW(const std::source_location& location)
+inline std::wstring BuildErrorTagW(const std::source_location& location)
 {
 	const std::string tag = BuildErrorTag(location);
 	return std::wstring(tag.begin(), tag.end());
 }
 
-static inline std::string BuildJsonError(const std::string& key, const std::string& obj)
+inline std::string BuildJsonError(const std::string& key, const std::string& obj)
 {
 	return std::format("Key '{}' for object '{}' not found in patch", key, obj);
 }
@@ -88,7 +86,7 @@ static bool g_skipBackup = false;
 }
 
 template<typename T>
-static inline std::string Dec2Hex(T i)
+inline std::string Dec2Hex(T i)
 {
 	std::stringstream stream;
 	stream << "0x" << std::setfill('0') << std::setw(sizeof(T) * 2);
@@ -98,7 +96,7 @@ static inline std::string Dec2Hex(T i)
 }
 
 template<typename T>
-static inline std::wstring Dec2HexW(T i)
+inline std::wstring Dec2HexW(T i)
 {
 	std::wstringstream stream;
 	stream << L"0x" << std::setfill(wchar_t('0')) << std::setw(sizeof(T) * 2);
@@ -107,44 +105,44 @@ static inline std::wstring Dec2HexW(T i)
 	return stream.str();
 }
 
-static inline const tString GetFileName(const tString& file)
+inline const tString GetFileName(const tString& file)
 {
-	return fs::path(file).filename();
+	return std::filesystem::path(file).filename();
 }
 
-static inline const tString GetFileNameNoExt(const tString& file)
+inline const tString GetFileNameNoExt(const tString& file)
 {
-	return fs::path(file).stem().wstring();
+	return std::filesystem::path(file).stem().wstring();
 }
 
-static inline std::wstring ToUTF16(const std::string& utf8String)
+inline std::wstring ToUTF16(const std::string& utf8String)
 {
 	static std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
 	return conv.from_bytes(utf8String);
 }
 
-static inline std::string ToUTF8(const std::wstring& utf16String)
+inline std::string ToUTF8(const std::wstring& utf16String)
 {
 	static std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
 	return conv.to_bytes(utf16String);
 }
 
-static inline void CreateBackup(const tString& file)
+inline void CreateBackup(const tString& file)
 {
 	// If the skip backup flag is set, do not create a backup
 	if (wolfRPGUtils::g_skipBackup) return;
 
 	// If the file does not exist, do not create a backup
-	if (!fs::exists(file)) return;
+	if (!std::filesystem::exists(file)) return;
 
 	// If the backup file already exists, do not create a new backup
-	if (fs::exists(file + L".bak")) return;
+	if (std::filesystem::exists(file + L".bak")) return;
 
 	// Create a backup of the file
-	fs::copy_file(file, file + L".bak");
+	std::filesystem::copy_file(file, file + L".bak");
 }
 
-static inline tString StrReplaceAll(tString str, const tString& from, const tString& to)
+inline tString StrReplaceAll(tString str, const tString& from, const tString& to)
 {
 	size_t startPos = 0;
 	if (from.empty() || str.empty()) return str;
@@ -159,7 +157,7 @@ static inline tString StrReplaceAll(tString str, const tString& from, const tStr
 }
 
 // Strip all leading / trailing whitespace, including fullwidth spaces
-static inline tString FullStrip(tString str)
+inline tString FullStrip(tString str)
 {
 	StrReplaceAll(str, L" ", L"");
 	str = std::regex_replace(str, std::wregex(L"^\\u3000*"), L"");
@@ -168,12 +166,22 @@ static inline tString FullStrip(tString str)
 	return str;
 }
 
-static inline tString EscapePath(tString path)
+inline tString EscapePath(tString path)
 {
 	path = FullStrip(path);
 	path = std::regex_replace(path, std::wregex(L"[\\/\\\\:\\*\\?\\\"<>\\|]"), L"_");
 
 	return path;
+}
+
+inline bool FilenameAnyOf(const std::filesystem::path& path, const std::vector<std::string>& filenames)
+{
+	for (const auto& fN : filenames)
+	{
+		if (path.filename() == fN)
+			return true;
+	}
+	return false;
 }
 
 extern tString g_activeFile = L"";

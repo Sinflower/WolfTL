@@ -34,8 +34,6 @@
 
 #include <filesystem>
 
-namespace fs = std::filesystem;
-
 class WolfRPG
 {
 public:
@@ -171,7 +169,7 @@ private:
 
 	void loadMaps()
 	{
-		if (!fs::exists(m_dataPath + L"/MapData/"))
+		if (!std::filesystem::exists(m_dataPath + L"/MapData/"))
 		{
 			std::cout << "MapData directory not found. Skipping Maps ..." << std::endl;
 			return;
@@ -180,7 +178,7 @@ private:
 		std::cout << "Loading Maps ... " << std::flush;
 
 		size_t prevLength = 0;
-		for (fs::directory_entry p : fs::directory_iterator(m_dataPath + L"/MapData/"))
+		for (std::filesystem::directory_entry p : std::filesystem::directory_iterator(m_dataPath + L"/MapData/"))
 		{
 			if (p.path().extension() == ".mps")
 			{
@@ -207,9 +205,9 @@ private:
 	{
 		std::cout << "Loading Databases ... " << std::flush;
 
-		for (fs::directory_entry p : fs::directory_iterator(m_dataPath + L"/BasicData/"))
+		for (std::filesystem::directory_entry p : std::filesystem::directory_iterator(m_dataPath + L"/BasicData/"))
 		{
-			fs::path pp = p.path();
+			std::filesystem::path pp = p.path();
 			if (pp.extension() == ".project" && pp.filename() != "SysDataBaseBasic.project")
 			{
 				tString projectFile(p.path());
@@ -224,11 +222,11 @@ private:
 
 	void checkAndCreateDir(const tString& dir) const
 	{
-		if (!fs::exists(dir))
+		if (!std::filesystem::exists(dir))
 		{
-			if (!fs::create_directories(dir))
+			if (!std::filesystem::create_directories(dir))
 			{
-				if (!fs::exists(dir))
+				if (!std::filesystem::exists(dir))
 					throw WolfRPGException(ERROR_TAGW + L"Failed to create directory: " + dir);
 			}
 		}

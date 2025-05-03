@@ -401,7 +401,7 @@ class Map : public WolfDataBase
 {
 public:
 	explicit Map(const tString& fileName = L"") :
-		WolfDataBase(fileName, MAGIC_NUMBER)
+		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::Map)
 	{
 		if (!fileName.empty())
 			Load(fileName);
@@ -424,6 +424,14 @@ protected:
 		m_height    = coder.ReadInt();
 
 		uint32_t eventCount = coder.ReadInt();
+
+		if (m_unknown1 >= 0x67)
+		{
+			m_unknown4 = coder.ReadInt();
+			m_unknown5 = coder.ReadInt();
+
+			Command::Command::s_v35 = true;
+		}
 
 		bool readTiles = true;
 
@@ -508,6 +516,8 @@ private:
 	uint32_t m_unknown1 = 0;
 	uint8_t m_unknown2  = 0;
 	tString m_unknown3  = TEXT("");
+	uint32_t m_unknown4 = 0;
+	uint32_t m_unknown5 = 0;
 
 	uint32_t m_tilesetID = 0;
 	uint32_t m_width     = 0;

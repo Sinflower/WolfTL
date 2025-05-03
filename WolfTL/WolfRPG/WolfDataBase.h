@@ -36,10 +36,10 @@
 class WolfDataBase
 {
 public:
-	WolfDataBase(const tString& fileName, const MagicNumber& magic, const bool& isDB = false, const uInts& seedIndices = {}) :
+	WolfDataBase(const tString& fileName, const MagicNumber& magic, const WolfFileType& fileType, const uInts& seedIndices = {}) :
 		m_fileName(fileName),
 		m_magic(magic),
-		m_isDB(isDB),
+		m_fileType(fileType),
 		m_seedIndices(seedIndices)
 	{
 	}
@@ -55,7 +55,28 @@ public:
 
 		g_activeFile = ::GetFileName(m_fileName);
 
-		FileCoder coder(m_fileName, FileCoder::Mode::READ, m_isDB, m_seedIndices);
+		// Reset the static variable for Command
+		Command::Command::s_v35 = false;
+
+		FileCoder coder(m_fileName, FileCoder::Mode::READ, m_fileType, m_seedIndices);
+
+		if (coder.IsEncrypted())
+		{
+			m_cryptHeader = coder.GetCryptHeader();
+			coder.SetUTF8(m_magic.IsUTF8(m_cryptHeader));
+		}
+		else
+			VERIFY_MAGIC(coder, m_magic);
+
+		return load(coder);
+	}
+
+	bool Load(const Bytes& buffer)
+	{
+		if (buffer.empty())
+			throw WolfRPGException(ERROR_TAG + "Trying to load with empty buffer");
+
+		FileCoder coder(buffer, FileCoder::Mode::READ, m_fileType, m_seedIndices);
 
 		if (coder.IsEncrypted())
 		{
@@ -73,7 +94,7 @@ public:
 		const tString fileName = ::GetFileName(m_fileName);
 		g_activeFile           = fileName;
 		tString outputFN       = outputDir + L"/" + fileName;
-		FileCoder coder(outputFN, FileCoder::Mode::WRITE, m_isDB, m_seedIndices);
+		FileCoder coder(outputFN, FileCoder::Mode::WRITE, m_fileType, m_seedIndices);
 		dump(coder);
 	}
 
@@ -96,7 +117,7 @@ public:
 		g_activeFile           = fileName;
 
 		const tString patchFile = patchFolder + L"/" + fileName + L".json";
-		if (!fs::exists(patchFile))
+		if (!std::filesystem::exists(patchFile))
 			throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFile);
 
 		nlohmann::ordered_json j;
@@ -121,7 +142,7 @@ protected:
 protected:
 	tString m_fileName;
 	MagicNumber m_magic;
-	bool m_isDB;
+	WolfFileType m_fileType;
 	uInts m_seedIndices = {};
 
 	Bytes m_cryptHeader = {};

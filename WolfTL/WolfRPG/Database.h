@@ -510,7 +510,7 @@ public:
 			g_activeFile           = fileName;
 
 			tString outputFN = outputDir + L"/" + fileName;
-			FileCoder coder(outputFN, FileCoder::Mode::WRITE);
+			FileCoder coder(outputFN, FileCoder::Mode::WRITE, WolfFileType::Project);
 			coder.WriteInt(m_types.size());
 			for (const Type& type : m_types)
 				type.DumpProject(coder);
@@ -520,7 +520,7 @@ public:
 		g_activeFile           = fileName;
 
 		tString outputFN = outputDir + L"/" + fileName;
-		FileCoder coder(outputFN, FileCoder::Mode::WRITE, true, DAT_SEED_INDICES);
+		FileCoder coder(outputFN, FileCoder::Mode::WRITE, WolfFileType::DataBase, DAT_SEED_INDICES);
 		coder.Write(DAT_MAGIC_NUMBER);
 
 		coder.WriteByte(m_startEndIndicator);
@@ -557,7 +557,7 @@ public:
 		g_activeFile           = fileName;
 
 		const tString patchFile = patchFolder + L"/" + fileName + L".json";
-		if (!fs::exists(patchFile))
+		if (!std::filesystem::exists(patchFile))
 			throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFile);
 
 		nlohmann::ordered_json j;
@@ -588,7 +588,7 @@ private:
 	bool init()
 	{
 		g_activeFile = ::GetFileName(m_datFileName);
-		FileCoder coder(m_datFileName, FileCoder::Mode::READ, true, DAT_SEED_INDICES);
+		FileCoder coder(m_datFileName, FileCoder::Mode::READ, WolfFileType::DataBase, DAT_SEED_INDICES);
 		if (coder.IsEncrypted())
 			m_cryptHeader = coder.GetCryptHeader();
 		else
@@ -599,7 +599,7 @@ private:
 		// Process the project file
 		{
 			g_activeFile = ::GetFileName(m_projectFileName);
-			FileCoder coder(m_projectFileName, FileCoder::Mode::READ);
+			FileCoder coder(m_projectFileName, FileCoder::Mode::READ, WolfFileType::Project);
 			uint32_t typeCnt = coder.ReadInt();
 			for (uint32_t i = 0; i < typeCnt; i++)
 				m_types.push_back(Type(coder));

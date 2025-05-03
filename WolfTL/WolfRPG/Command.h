@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  File: Command.h
  *  Copyright (c) 2024 Sinflower
  *
@@ -23,6 +23,54 @@
  *  SOFTWARE.
  *
  */
+
+/*
+SetVariable
+- Value meaning:
+0 - 999999 - Respective value
+1000000 - 1999999 - Ev Self value
+2000000 - 2999999 - Variable value
+9000000 - 9999999 - System variable value
+
+- All operators are stored in combined form in arg[3]
+- Modify operators for arg[0]:
+	  - 0x0000 - =
+	  - 0x0100 - +=
+	  - 0x0200 - -=
+	  - 0x0300 - *=
+	  - 0x0400 - /=
+	  - 0x0500 - %=
+	  - 0x0600 - floor
+	  - 0x0700 - ceil
+	  - 0x0800 - abs
+	  - 0x0900 - Angle x10←Slope
+	  - 0x0A00 - sin[x1000] ← angle x10
+	  - 0x0B00 - cos[x1000] ← angle x10
+	  - 0x0C00 - √[x1000]
+
+  - Operator between arg[1] and arg[2]:
+	  - 0x0000 - +
+	  - 0x1000 - -
+	  - 0x2000 - *
+	  - 0x3000 - %
+	  - 0x4000 - ~
+	  - 0x5000 - &
+	  - 0x7000 - |
+	  - 0x8000 - ^
+	  - 0x9000 - <<
+
+- extract ID:
+arg[0] >= 2000000 && arg[0] < 3000000
+	id = (arg[0] - 2000000);
+	// V0 - V18 = id value
+	// V1-0 - V9-0 = (id / 100000) -- The non divided value are stored in the wolfx files
+
+
+SetString
+- extract ID:
+arg[0] >= 3000000 && arg[0] < 4000000
+	id = (arg[0] % 1000000)
+*/
 
 #pragma once
 
@@ -109,6 +157,7 @@ enum class CommandType
 	LoopEnd            = 498,
 	BranchEnd          = 499,
 	Default            = 999,
+	ProFeature         = 1000,
 	Invalid            = -1
 };
 
@@ -379,6 +428,8 @@ public:
 		coder.WriteByte(TERMINATOR);
 	}
 
+	static bool s_v35;
+
 protected:
 	uInts m_args;
 	CommandType m_cid;
@@ -387,6 +438,8 @@ protected:
 
 	static const uint8_t TERMINATOR = 0x0;
 };
+
+bool Command::s_v35 = false;
 
 namespace CommandSpecialClasses
 {
@@ -509,20 +562,142 @@ private:
 	uint8_t m_flags       = 0;
 	RouteCommands m_route = {};
 };
+
+class ProFeature : public Command
+{
+public:
+	enum class Type
+	{
+		ScreenshotJPG = 0,
+		CreateFolder,
+		FileCopy,
+		FileDelete,
+		ScreenshotPNG,
+		StopProcessing,
+		GameRestart,
+		SetWolfxKey,
+		UnsetWolfxKey,
+		VibrateGamepad,
+		Invalid
+	};
+	/*
+		Pro Feature ID Mapping:
+		0 - Screenshot (JPG)
+		1 - Create folder
+		2 - Copy file
+		3 - Delete file
+		4 - Screenshot (PNG)
+		5 - Stop processing for x ms
+		6 - Game restart (with argument setting)
+		7 - Set .wolfx decryption key
+		8 - Unset .wolfx decryption key
+		9 - Vibrate gamepad
+	*/
+public:
+	ProFeature(const CommandType& cid, const uInts& args, const tStrings& stringArgs, const uint8_t& indent) :
+		Command(cid, args, stringArgs, indent)
+	{
+	}
+
+	const Type GetProFeatureType() const
+	{
+		if (m_args.empty())
+			return Type::Invalid;
+		return static_cast<Type>(m_args[0]);
+	}
+
+	const tString GetWolfxFolder() const
+	{
+		if (m_stringArgs.empty())
+			return L"";
+		return m_stringArgs.at(0);
+	}
+
+	const tString GetWolfxKey() const
+	{
+		if (m_stringArgs.size() < 2)
+			return L"";
+		return m_stringArgs.at(1);
+	}
+
+private:
+};
+
+class SetString : public Command
+{
+public:
+	SetString(const CommandType& cid, const uInts& args, const tStrings& stringArgs, const uint8_t& indent) :
+		Command(cid, args, stringArgs, indent)
+	{
+	}
+
+	const uint32_t GetID() const
+	{
+		if (m_args.empty())
+			return 0;
+
+		if (m_args[0] >= 3000000 && m_args[0] < 4000000)
+			return (m_args[0] % 1000000);
+
+		return m_args[0];
+	}
+
+	tString GetTString() const
+	{
+		return Text();
+	}
+
+	std::string GetString() const
+	{
+		return ToUTF8(Text());
+	}
+};
+
+class SetVariable : public Command
+{
+public:
+	SetVariable(const CommandType& cid, const uInts& args, const tStrings& stringArgs, const uint8_t& indent) :
+		Command(cid, args, stringArgs, indent)
+	{
+	}
+
+	const uint32_t GetID() const
+	{
+		if (m_args.empty())
+			return 0;
+		if (m_args[0] >= 2000000 && m_args[0] < 3000000)
+			return m_args[0] - 2000000;
+
+		return m_args[0];
+	}
+
+	const uint32_t GetValue() const
+	{
+		if (m_args.size() < 2)
+			return 0;
+
+		// TODO: Account for actual arithmetic operations using args[2] and args[3]
+		return m_args[1];
+	}
+};
+
 }; // namespace CommandSpecialClasses
 
 namespace CommandShPtr
 {
-using Command = std::shared_ptr<Command>;
-using Move    = std::shared_ptr<CommandSpecialClasses::Move>;
-using Picture = std::shared_ptr<CommandSpecialClasses::Picture>;
+using Command     = std::shared_ptr<Command>;
+using Move        = std::shared_ptr<CommandSpecialClasses::Move>;
+using Picture     = std::shared_ptr<CommandSpecialClasses::Picture>;
+using ProFeature  = std::shared_ptr<CommandSpecialClasses::ProFeature>;
+using SetString   = std::shared_ptr<CommandSpecialClasses::SetString>;
+using SetVariable = std::shared_ptr<CommandSpecialClasses::SetVariable>;
 } // namespace CommandShPtr
 
 inline CommandShPtr::Command Command::Command::Init(FileCoder& coder)
 {
 	CommandShPtr::Command cmd = nullptr;
-	uint8_t argsCount = coder.ReadByte() - 1;
-	CommandType cid   = static_cast<CommandType>(coder.ReadInt());
+	uint8_t argsCount         = coder.ReadByte() - 1;
+	CommandType cid           = static_cast<CommandType>(coder.ReadInt());
 	uInts args;
 
 	for (uint8_t i = 0; i < argsCount; i++)
@@ -551,16 +726,28 @@ inline CommandShPtr::Command Command::Command::Init(FileCoder& coder)
 			case CommandType::Move:
 				cmd = std::make_shared<CommandSpecialClasses::Move>(cid, args, stringArgs, indent, coder);
 				break;
+			case CommandType::ProFeature:
+				cmd = std::make_shared<CommandSpecialClasses::ProFeature>(cid, args, stringArgs, indent);
+				break;
+			case CommandType::SetString:
+				cmd = std::make_shared<CommandSpecialClasses::SetString>(cid, args, stringArgs, indent);
+				break;
+			case CommandType::SetVariable:
+				cmd = std::make_shared<CommandSpecialClasses::SetVariable>(cid, args, stringArgs, indent);
+				break;
 			default:
 				cmd = std::make_shared<Command>(cid, args, stringArgs, indent);
 				break;
 		}
 	}
 
-	uint8_t unknown = coder.ReadByte();
+	if (s_v35)
+	{
+		uint8_t unknown = coder.ReadByte();
 
-	if (unknown != 0x0)
-		throw WolfRPGException(ERROR_TAG + "Unexpected command unknown byte: " + std::to_string(unknown));
+		if (unknown != 0x0)
+			throw WolfRPGException(ERROR_TAG + "Unexpected command unknown byte: " + std::to_string(unknown));
+	}
 
 	return cmd;
 }

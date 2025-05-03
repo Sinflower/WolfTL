@@ -26,6 +26,8 @@
 
 #pragma once
 
+// TODO: When integrating the decryption the filesize diff override might not be required anymore
+
 #include "FileCoder.h"
 #include "WolfDataBase.h"
 #include "WolfRPGUtils.h"
@@ -37,10 +39,17 @@ class GameDat : public WolfDataBase
 {
 public:
 	explicit GameDat(const tString& fileName = L"") :
-		WolfDataBase(fileName, MAGIC_NUMBER, false, SEED_INDICES)
+		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::GameDat, SEED_INDICES)
 	{
 		if (!fileName.empty())
 			Load(fileName);
+	}
+
+	explicit GameDat(const Bytes& buffer, const bool& ignoreFilesizeDiff = false) :
+		WolfDataBase(L"Game.dat", MAGIC_NUMBER, WolfFileType::GameDat, SEED_INDICES),
+		m_ignoreFilesizeDiff(ignoreFilesizeDiff)
+	{
+		Load(buffer);
 	}
 
 	const tString& GetTitle() const
@@ -105,9 +114,12 @@ protected:
 			m_titleMsg   = coder.ReadString();
 		}
 
+		if (m_stringCount > 13)
+			m_unknownString14 = coder.ReadString();
+
 		m_fileSize = coder.ReadInt();
 
-		if (m_fileSize != m_oldSize)
+		if (!m_ignoreFilesizeDiff && (m_fileSize != m_oldSize))
 			throw WolfRPGException(ERROR_TAG + std::format("Game.dat has different size than expected - expected: {} - got: {}", m_fileSize, m_oldSize));
 
 		m_unknown2 = coder.Read();
@@ -140,6 +152,9 @@ protected:
 			coder.WriteString(m_startUpMsg);
 			coder.WriteString(m_titleMsg);
 		}
+
+		if (m_stringCount > 13)
+			coder.WriteString(m_unknownString14);
 
 		coder.WriteInt(calcNewSize());
 		coder.Write(m_unknown2);
@@ -200,6 +215,9 @@ private:
 			size += FileCoder::CalcStringSize(m_titleMsg) + 4;
 		}
 
+		if (m_stringCount > 13)
+			size += FileCoder::CalcStringSize(m_unknownString14) + 4;
+
 		size += sizeof(m_fileSize);
 
 		size += m_unknown2.size();
@@ -221,10 +239,13 @@ private:
 	tString m_gaugeImg         = TEXT("");
 	tString m_startUpMsg       = TEXT("");
 	tString m_titleMsg         = TEXT("");
+	tString m_unknownString14  = TEXT("");
 	uint32_t m_fileSize        = 0;
 	Bytes m_unknown2           = {};
 
 	uint32_t m_oldSize = 0;
+
+	bool m_ignoreFilesizeDiff = false;
 
 	inline static const uInts SEED_INDICES{ 0, 8, 6 };
 	inline static const MagicNumber MAGIC_NUMBER{ { 0x57, 0x00, 0x00, 0x4f, 0x4c, 0x00, 0x46, 0x4d, 0x00 }, 8 };

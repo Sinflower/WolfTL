@@ -37,7 +37,9 @@
 #include <iostream>
 #include <string>
 
-namespace fs = std::filesystem;
+// TODO:
+// - Create Wrapper class for reader / writer to have mode independent access object
+// - Remove static headers
 
 class MagicNumber
 {
@@ -108,145 +110,68 @@ public:
 	// Disable Copy/Move constructor
 	DISABLE_COPY_MOVE(FileCoder)
 
-	FileCoder(const tString& fileName, const Mode& mode, const bool& isDB = false, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
+	FileCoder(const tString& fileName, const Mode& mode, const WolfFileType& fileType, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
 		m_cryptHeader(cryptHeader),
-		m_mode(mode)
+		m_mode(mode),
+		m_seedIndices(seedIndices),
+		m_fileType(fileType)
 	{
-		bool isProject       = false;
-		bool isMap           = false;
-		const bool isGameDat = (fs::path(fileName).filename() == "Game.dat");
-
-		// If the file extension is .project change the flag
-		if (fs::path(fileName).extension() == ".project")
-			isProject = true;
-		else if (fs::path(fileName).extension() == ".mps")
-			isMap = true;
-
 		if (mode == Mode::READ)
 		{
 			m_reader.Open(fileName);
-
-			if (!isProject)
-			{
-				if (seedIndices.empty() && !isMap) return;
-
-				if (m_reader.At(1) == 0x50)
-				{
-					Bytes data = Read();
-					cryptDatV2(data);
-
-					m_cryptHeader = Bytes(data.begin(), data.begin() + 143);
-
-					m_reader.InitData(data);
-					m_reader.Skip(143);
-
-					s_projKey = m_cryptHeader[0x14];
-				}
-				else if (isMap)
-				{
-					if (m_reader.At(20) < 0x65) return;
-
-					const Bytes header = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x57, 0x4F, 0x4C, 0x46, 0x4D, 0x00, 0x55, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x66 };
-
-					const uint32_t headerSize = static_cast<uint32_t>(header.size());
-
-					m_reader.Seek(headerSize);
-					uint32_t decDataSize = m_reader.ReadUInt32();
-					uint32_t encDataSize = m_reader.ReadUInt32();
-
-					Bytes decData(decDataSize + header.size(), 0);
-
-					lz4Unpack(m_reader.Get(), &decData[headerSize], encDataSize);
-
-					std::memcpy(decData.data(), header.data(), headerSize); // Copy header
-
-					m_reader.InitData(decData);
-				}
-				else
-				{
-					uint8_t indicator = ReadByte();
-
-					if (isDB)
-					{
-						if (m_reader.At(10) == 0xC4)
-						{
-							m_reader.Seek(11);
-							uint32_t decDataSize = m_reader.ReadUInt32();
-							uint32_t encDataSize = m_reader.ReadUInt32();
-
-							Bytes decData(decDataSize + 11, 0);
-
-							lz4Unpack(m_reader.Get(), &decData[11], encDataSize);
-							m_reader.Seek(0);
-							std::memcpy(decData.data(), m_reader.Get(), 11); // Copy header
-
-							m_reader.InitData(decData);
-							m_reader.Seek(1);
-							return;
-						}
-
-						if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
-							return;
-					}
-					else
-					{
-						if (indicator == 0x0)
-							return;
-					}
-
-					Bytes header(CRYPT_HEADER_SIZE);
-					header[0] = indicator;
-
-					for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
-						header[i] = ReadByte();
-
-					Bytes seeds;
-					for (size_t i = 0; i < seedIndices.size(); i++)
-						seeds.push_back(header[seedIndices[i]]);
-
-					m_cryptHeader = header;
-
-					Bytes data = Read();
-					cryptDatV1(data, seeds);
-
-					m_reader.InitData(data);
-
-					if (isGameDat) return;
-
-					m_reader.Skip(5);
-					uint32_t keySize = m_reader.ReadUInt32();
-					int8_t projKey   = m_reader.ReadInt8();
-
-					if (s_projKey == -1)
-						s_projKey = projKey;
-
-					m_reader.Skip(keySize - 1);
-				}
-			}
-			else if (s_projKey != -1)
-			{
-				Bytes data = Read();
-
-				cryptProj(data);
-
-				m_reader.InitData(data);
-			}
+			load();
 		}
 		else if (mode == Mode::WRITE)
 		{
-			CreateBackup(fileName);
+			if (s_createBackup)
+				CreateBackup(fileName);
+
 			m_writer.Open(fileName);
 
-			if (!seedIndices.empty() && !cryptHeader.empty())
+			if (!m_seedIndices.empty() && !cryptHeader.empty())
 			{
 				Write(cryptHeader);
 			}
 			else
 			{
-				if (!seedIndices.empty())
+				if (!m_seedIndices.empty())
 					WriteByte(0);
 			}
 		}
+	}
+
+	FileCoder(const Bytes& buffer, const Mode& mode, const WolfFileType& fileType, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
+		m_cryptHeader(cryptHeader),
+		m_mode(mode),
+		m_seedIndices(seedIndices),
+		m_fileType(fileType)
+	{
+		if (mode != Mode::READ)
+			throw WolfRPGException(ERROR_TAG + "FileCoder: Only READ mode is supported for buffer input.");
+
+		if (buffer.empty())
+			throw WolfRPGException(ERROR_TAG + "FileCoder: Buffer is empty.");
+
+		m_reader.InitData(buffer);
+		load();
+	}
+
+	void Unpack(const bool& seekBack = false)
+	{
+		const uint32_t startOffset = m_reader.GetOffset();
+		const uint32_t decDataSize = m_reader.ReadUInt32();
+		const uint32_t encDataSize = m_reader.ReadUInt32();
+
+		Bytes decData(decDataSize + startOffset, 0);
+
+		lz4Unpack(m_reader.Get(), &decData[startOffset], encDataSize);
+		m_reader.Seek(0);
+		std::memcpy(decData.data(), m_reader.Get(), startOffset); // Copy header
+
+		m_reader.InitData(decData);
+
+		if (seekBack)
+			m_reader.Seek(startOffset);
 	}
 
 	~FileCoder()
@@ -549,7 +474,7 @@ private:
 				len += pPacked[pcOff++];
 			}
 
-			for (uint32_t i = 0; i < len; ++i)
+			for (uint32_t i = 0; i < len; i++)
 				pUnpacked[upOff++] = pPacked[pcOff++];
 
 			if (pcOff == packSize)
@@ -579,16 +504,112 @@ private:
 		}
 	}
 
+	void load()
+	{
+		if (m_fileType == WolfFileType::Project)
+		{
+			if (s_projKey != -1)
+			{
+				Bytes data = Read();
+				cryptProj(data);
+				m_reader.InitData(data);
+			}
+
+			return;
+		}
+
+		if (m_seedIndices.empty() && (m_fileType != WolfFileType::Map)) return;
+
+		if (m_reader.At(1) == 0x50)
+		{
+			Bytes data = Read();
+			cryptDatV2(data);
+
+			m_cryptHeader = Bytes(data.begin(), data.begin() + 143);
+
+			m_reader.InitData(data);
+			m_reader.Skip(143);
+
+			s_projKey = m_cryptHeader[0x14];
+		}
+		else if (m_fileType == WolfFileType::Map)
+		{
+			if (m_reader.At(20) < 0x65) return;
+
+			const Bytes header = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x57, 0x4F, 0x4C, 0x46, 0x4D, 0x00, 0x55, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x66 };
+
+			const uint32_t headerSize = static_cast<uint32_t>(header.size());
+
+			m_reader.Seek(headerSize);
+			Unpack();
+		}
+		else
+		{
+			uint8_t indicator = ReadByte();
+
+			if (m_fileType == WolfFileType::DataBase)
+			{
+				if (m_reader.At(10) == 0xC4)
+				{
+					m_reader.Seek(11);
+					Unpack();
+					m_reader.Seek(1);
+					return;
+				}
+
+				if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
+					return;
+			}
+			else
+			{
+				if (indicator == 0x0)
+					return;
+			}
+
+			Bytes header(CRYPT_HEADER_SIZE);
+			header[0] = indicator;
+
+			for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
+				header[i] = ReadByte();
+
+			Bytes seeds;
+			for (size_t i = 0; i < m_seedIndices.size(); i++)
+				seeds.push_back(header[m_seedIndices[i]]);
+
+			m_cryptHeader = header;
+
+			Bytes data = Read();
+			cryptDatV1(data, seeds);
+
+			m_reader.InitData(data);
+
+			if (m_fileType == WolfFileType::GameDat) return;
+
+			m_reader.Skip(5);
+			uint32_t keySize = m_reader.ReadUInt32();
+			int8_t projKey   = m_reader.ReadInt8();
+
+			if (s_projKey == -1)
+				s_projKey = projKey;
+
+			m_reader.Skip(keySize - 1);
+		}
+	}
+
 private:
 	Bytes m_cryptHeader;
 	Mode m_mode;
+	uInts m_seedIndices;
+	WolfFileType m_fileType;
 
 	FileReader m_reader = {};
 	FileWriter m_writer = {};
 
 	static bool s_isUTF8;
 	static uint32_t s_projKey;
+	static bool s_createBackup;
 };
 
-bool FileCoder::s_isUTF8      = false;
-uint32_t FileCoder::s_projKey = -1;
+bool FileCoder::s_isUTF8       = false;
+uint32_t FileCoder::s_projKey  = -1;
+bool FileCoder::s_createBackup = false;
