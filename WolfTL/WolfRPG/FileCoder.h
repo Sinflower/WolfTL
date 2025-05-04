@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  File: FileCoder.h
  *  Copyright (c) 2024 Sinflower
  *
@@ -32,11 +32,13 @@
 #include "WolfRPGException.h"
 #include "WolfRPGUtils.h"
 
+#include "../Wolf35Unprotect.hpp"
+
 #include <array>
 #include <filesystem>
 #include <iostream>
-#include <string>
 #include <lz4/lz4.h>
+#include <string>
 
 // TODO:
 // - Create Wrapper class for reader / writer to have mode independent access object
@@ -173,7 +175,7 @@ public:
 
 		Bytes decData(decDataSize + startOffset, 0);
 
-		//lz4Unpack(m_reader.Get(), &decData[startOffset], encDataSize);
+		// lz4Unpack(m_reader.Get(), &decData[startOffset], encDataSize);
 		int32_t decSize = LZ4_decompress_safe(reinterpret_cast<const char*>(m_reader.Get()), reinterpret_cast<char*>(&decData[startOffset]), encDataSize, decDataSize);
 
 		if (decSize < 0)
@@ -485,6 +487,31 @@ private:
 		return sjis;
 	}
 
+	void decryptV3_3()
+	{
+		Bytes data = Read();
+		cryptDatV2(data);
+
+		m_cryptHeader = Bytes(data.begin(), data.begin() + 143);
+
+		m_reader.InitData(data);
+		m_reader.Skip(143);
+
+		s_projKey = m_cryptHeader[0x14];
+	}
+
+	void decryptV3_5()
+	{
+		m_reader.Seek(0);
+		Bytes data = Read();
+		if (!wolf::v3_5::unprotect::decryptProV3Dat(data, m_fileType))
+			throw WolfRPGException(ERROR_TAG + "Failed to decrypt ProV3 data.");
+
+		m_reader.InitData(data);
+		// ¯\_(ツ)_/¯
+		s_projKey = 0;
+	}
+
 	void load()
 	{
 		if (m_fileType == WolfFileType::Project)
@@ -503,17 +530,16 @@ private:
 
 		if (m_reader.At(1) == 0x50)
 		{
-			Bytes data = Read();
-			cryptDatV2(data);
-
-			m_cryptHeader = Bytes(data.begin(), data.begin() + 143);
-
-			m_reader.InitData(data);
-			m_reader.Skip(143);
-
-			s_projKey = m_cryptHeader[0x14];
+			if (m_reader.At(5) < 0x57)
+			{
+				decryptV3_3();
+				return;
+			}
+			else
+				decryptV3_5();
 		}
-		else if (m_fileType == WolfFileType::Map)
+
+		if (m_fileType == WolfFileType::Map)
 		{
 			if (m_reader.At(20) < 0x65) return;
 

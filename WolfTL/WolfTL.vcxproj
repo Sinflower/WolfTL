@@ -145,6 +145,7 @@
   <ItemGroup>
     <ClInclude Include="3rdParty\lz4\lz4.h" />
     <ClInclude Include="3rdParty\nlohmann\json.hpp" />
+    <ClInclude Include="Wolf35Unprotect.hpp" />
     <ClInclude Include="WolfRPG\NewWolfCrypt.h" />
     <ClInclude Include="WolfRPG\Command.h" />
     <ClInclude Include="WolfRPG\CommonEvents.h" />
@@ -159,6 +160,7 @@
     <ClInclude Include="WolfRPG\WolfRPG.h" />
     <ClInclude Include="WolfRPG\WolfRPGException.h" />
     <ClInclude Include="WolfRPG\WolfRPGUtils.h" />
+    <ClInclude Include="WolfSha512.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

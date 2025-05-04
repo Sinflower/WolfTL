@@ -619,6 +619,7 @@ private:
 				throw WolfRPGException(ERROR_TAGW + L"Database [" + m_projectFileName + L"] has more data than expected");
 		}
 
+		g_activeFile     = ::GetFileName(m_datFileName);
 		uint32_t typeCnt = coder.ReadInt();
 		if (typeCnt != m_types.size())
 		{

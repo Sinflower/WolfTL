@@ -13,9 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="WolfRPG">
-      <UniqueIdentifier>{eb67ee65-10df-4bdd-9521-ef45cbcb5c6b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="3rdParty">
       <UniqueIdentifier>{de8d292d-5798-471b-8766-6aed512168c9}</UniqueIdentifier>
     </Filter>
@@ -24,6 +21,9 @@
     </Filter>
     <Filter Include="3rdParty\lz4">
       <UniqueIdentifier>{a8c25797-2bbc-43e4-a6b9-ff2adf75bf88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\WolfRPG">
+      <UniqueIdentifier>{eb67ee65-10df-4bdd-9521-ef45cbcb5c6b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -36,52 +36,58 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WolfRPG\Command.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\CommonEvents.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\Database.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\FileCoder.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\GameDat.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\Map.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\RouteCommand.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\Types.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\WolfRPG.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\WolfRPGException.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\WolfRPGUtils.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\FileAccess.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\WolfDataBase.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\NewWolfCrypt.h">
-      <Filter>WolfRPG</Filter>
+      <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
     <ClInclude Include="3rdParty\nlohmann\json.hpp">
       <Filter>3rdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="3rdParty\lz4\lz4.h">
       <Filter>3rdParty\lz4</Filter>
+    </ClInclude>
+    <ClInclude Include="Wolf35Unprotect.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WolfSha512.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

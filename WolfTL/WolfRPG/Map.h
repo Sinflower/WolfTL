@@ -482,10 +482,12 @@ protected:
 		coder.WriteByte(m_unknown2);
 
 		////////
-		if (m_version >= 0x67)
+		if (m_version >= 0x65)
 		{
-			Command::Command::s_v35 = true;
-			pCoder                  = &bufCoder;
+			if (m_version >= 0x67)
+				Command::Command::s_v35 = true;
+
+			pCoder = &bufCoder;
 		}
 
 		pCoder->WriteString(m_unknown3);
@@ -514,7 +516,7 @@ protected:
 
 		pCoder->WriteByte(TERMINATOR);
 
-		if (m_version >= 0x67)
+		if (m_version >= 0x65)
 		{
 			bufCoder.Pack();
 			coder.WriteCoder(bufCoder);
