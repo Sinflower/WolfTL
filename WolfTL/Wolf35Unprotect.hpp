@@ -151,7 +151,7 @@ inline bool decryptProV3Dat(std::vector<uint8_t> &buffer, const WolfFileType &da
 	return true;
 }
 
-void unprotectProject(std::vector<uint8_t> &projData)
+inline void unprotectProject(std::vector<uint8_t> &projData)
 {
 	// ¯\_(ツ)_/¯ So far it looks like this is how it is done
 	srand(0);
