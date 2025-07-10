@@ -36,7 +36,7 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.5.0";
+static const std::string VERSION = "0.5.1";
 
 /*
 TODO:

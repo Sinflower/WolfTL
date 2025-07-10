@@ -88,6 +88,11 @@ public:
 		coder.WriteInt(m_indexInfo);
 	}
 
+	bool IsValid() const
+	{
+		return m_indexInfo >= INT_START;
+	}
+
 	bool IsString() const
 	{
 		return m_indexInfo >= STRING_START;
@@ -206,10 +211,15 @@ public:
 			nlohmann::ordered_json fieldData;
 			fieldData["name"] = ToUTF8(field.GetName());
 
-			if (field.IsString())
-				fieldData["value"] = ToUTF8(m_stringValues[field.Index()]);
+			if (field.IsValid())
+			{
+				if (field.IsString())
+					fieldData["value"] = ToUTF8(m_stringValues[field.Index()]);
+				else
+					fieldData["value"] = m_intValues[field.Index()];
+			}
 			else
-				fieldData["value"] = m_intValues[field.Index()];
+				fieldData["value"] = "INVALID_IGNORE";
 
 			j["data"].push_back(fieldData);
 		}
@@ -233,6 +243,8 @@ public:
 
 			const Field& field    = m_pFields->at(i);
 			std::string fieldName = ToUTF8(field.GetName());
+
+			if (!field.IsValid()) continue;
 
 			CHECK_JSON_KEY(fieldData, "name", dataStr);
 			CHECK_JSON_KEY(fieldData, "value", dataStr);
