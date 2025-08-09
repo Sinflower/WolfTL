@@ -36,7 +36,7 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.5.1";
+static const std::string VERSION = "0.5.2";
 
 /*
 TODO:
@@ -120,7 +120,7 @@ public:
 		patchGameDat(m_outputPath);
 
 		// Save the patched data
-		m_wolf.Save2File((inplace ? m_dataPath : (m_outputPath + PATCHED_DATA)));
+		m_wolf.Save2File((inplace ? m_dataPath : (m_outputPath / PATCHED_DATA)));
 	}
 
 private:
@@ -128,7 +128,7 @@ private:
 	{
 		std::cout << "Writing Maps to JSON ... " << std::flush;
 
-		const tString mapOutput = std::format(TEXT("{}/{}"), m_outputPath, MAP_OUTPUT);
+		const tString mapOutput = m_outputPath / MAP_OUTPUT;
 
 		// Make sure the output folder exists
 		fs::create_directories(mapOutput);
@@ -143,7 +143,7 @@ private:
 	{
 		std::cout << "Writing Databases to JSON ... " << std::flush;
 
-		const tString dbOutput = std::format(TEXT("{}/{}"), m_outputPath, DB_OUTPUT);
+		const tString dbOutput = m_outputPath / DB_OUTPUT;
 
 		// Make sure the output folder exists
 		fs::create_directories(dbOutput);
@@ -158,7 +158,7 @@ private:
 	{
 		std::cout << "Writing CommonEvents to JSON ... " << std::flush;
 
-		const tString comOutput = std::format(TEXT("{}/{}"), m_outputPath, COM_OUTPUT);
+		const tString comOutput = m_outputPath / COM_OUTPUT;
 
 		// Make sure the output folder exists
 		fs::create_directories(comOutput);
@@ -174,18 +174,18 @@ private:
 
 		std::cout << "Writing GameDat to JSON ... " << std::flush;
 
-		const tString gameDatOutput = std::format(TEXT("{}/{}"), m_outputPath, OUTPUT_DIR);
+		const tString gameDatOutput = m_outputPath / OUTPUT_DIR;
 
 		m_wolf.GetGameDat().ToJson(gameDatOutput);
 
 		std::cout << "Done" << std::endl;
 	}
 
-	void patchMaps(const tString& patchFolder)
+	void patchMaps(const fs::path& patchFolder)
 	{
 		std::cout << "Patching Maps ... " << std::flush;
 
-		const tString mapPatch = std::format(TEXT("{}/{}"), patchFolder, MAP_OUTPUT);
+		const tString mapPatch = patchFolder / MAP_OUTPUT;
 
 		// Check if the patch folder exists
 		if (!fs::exists(mapPatch))
@@ -200,11 +200,11 @@ private:
 		std::cout << "Done" << std::endl;
 	}
 
-	void patchDatabases(const tString& patchFolder)
+	void patchDatabases(const fs::path& patchFolder)
 	{
 		std::cout << "Patching Databases ... " << std::flush;
 
-		const tString dbPatch = std::format(TEXT("{}/{}"), patchFolder, DB_OUTPUT);
+		const tString dbPatch = patchFolder / DB_OUTPUT;
 
 		// Check if the patch folder exists
 		if (!fs::exists(dbPatch))
@@ -219,11 +219,11 @@ private:
 		std::cout << "Done" << std::endl;
 	}
 
-	void patchCommonEvents(const tString& patchFolder)
+	void patchCommonEvents(const fs::path& patchFolder)
 	{
 		std::cout << "Patching CommonEvents ... " << std::flush;
 
-		const tString comPatch = std::format(TEXT("{}/{}"), patchFolder, COM_OUTPUT);
+		const tString comPatch = patchFolder / COM_OUTPUT;
 
 		// Check if the patch folder exists
 		if (!fs::exists(comPatch))
@@ -237,13 +237,13 @@ private:
 		std::cout << "Done" << std::endl;
 	}
 
-	void patchGameDat(const tString& patchFolder)
+	void patchGameDat(const fs::path& patchFolder)
 	{
 		if (m_skipGD) return;
 
 		std::cout << "Patching GameDat ... " << std::flush;
 
-		const tString gameDatPatch = std::format(TEXT("{}/{}"), patchFolder, OUTPUT_DIR);
+		const tString gameDatPatch = patchFolder / OUTPUT_DIR;
 
 		m_wolf.GetGameDat().Patch(gameDatPatch);
 
@@ -251,8 +251,8 @@ private:
 	}
 
 private:
-	tString m_dataPath;
-	tString m_outputPath;
+	fs::path m_dataPath;
+	fs::path m_outputPath;
 	WolfRPG m_wolf;
 	bool m_skipGD;
 };
