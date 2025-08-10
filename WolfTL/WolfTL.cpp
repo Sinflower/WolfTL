@@ -36,7 +36,7 @@
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.5.2";
+static const std::string VERSION = "0.5.3";
 
 /*
 TODO:
@@ -71,10 +71,10 @@ class WolfTL
 	inline static const tString MAP_OUTPUT   = OUTPUT_DIR + TEXT("mps/");
 	inline static const tString DB_OUTPUT    = OUTPUT_DIR + TEXT("db/");
 	inline static const tString COM_OUTPUT   = OUTPUT_DIR + TEXT("common/");
-	inline static const tString PATCHED_DATA = TEXT("/patched/data/");
+	inline static const tString PATCHED_DATA = TEXT("patched/data/");
 
 public:
-	WolfTL(const tString& dataPath, const tString& outputPath, const bool& skipGD = false) :
+	WolfTL(const fs::path& dataPath, const fs::path& outputPath, const bool& skipGD = false) :
 		m_dataPath(dataPath),
 		m_outputPath(outputPath),
 		m_wolf(dataPath, skipGD),
@@ -289,6 +289,12 @@ int main(int argc, char* argv[])
 	const tString outputFolder = szArglist[2];
 	tString mode               = szArglist[3];
 
+	fs::path dataPath(dataFolder);
+	fs::path outputPath(outputFolder);
+
+	dataPath = fs::absolute(dataPath);
+	outputPath = fs::absolute(outputPath);
+
 	bool skipGameDat = true;
 
 	// if (argc >= 5)
@@ -304,7 +310,7 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		WolfTL wolf(dataFolder, outputFolder, skipGameDat);
+		WolfTL wolf(dataPath, outputPath, skipGameDat);
 		if (mode == TEXT("create"))
 			wolf.ToJson();
 		else if (mode == TEXT("patch"))
