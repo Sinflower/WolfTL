@@ -400,8 +400,8 @@ using Events = std::vector<Event>;
 class Map : public WolfDataBase
 {
 public:
-	explicit Map(const tString& fileName = L"") :
-		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::Map)
+	explicit Map(const tString& fileName = L"", const bool& saveUncompressed = false) :
+		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::Map, saveUncompressed)
 	{
 		if (!fileName.empty())
 			Load(fileName);

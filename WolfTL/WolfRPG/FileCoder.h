@@ -369,6 +369,11 @@ public:
 		m_writer.Write(data);
 	}
 
+	void DumpReader(const std::wstring& dumpFileName)
+	{
+		m_reader.DumpToFile(dumpFileName);
+	}
+
 #ifdef BIT_64
 	// For 64 bit an additional method is required to properly handle size_t inputs
 	void WriteInt(const std::size_t& data)

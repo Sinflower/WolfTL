@@ -36,10 +36,11 @@
 class WolfDataBase
 {
 public:
-	WolfDataBase(const tString& fileName, const MagicNumber& magic, const WolfFileType& fileType, const uInts& seedIndices = {}) :
+	WolfDataBase(const tString& fileName, const MagicNumber& magic, const WolfFileType& fileType, const bool& saveUncompressed = false, const uInts& seedIndices = {}) :
 		m_fileName(fileName),
 		m_magic(magic),
 		m_fileType(fileType),
+		m_saveUncompressed(saveUncompressed),
 		m_seedIndices(seedIndices)
 	{
 	}
@@ -67,6 +68,9 @@ public:
 		}
 		else
 			VERIFY_MAGIC(coder, m_magic);
+
+		if (m_saveUncompressed)
+			coder.DumpReader(getUncompressedPath());
 
 		return load(coder);
 	}
@@ -136,17 +140,39 @@ public:
 		return m_fileName;
 	}
 
+	static void SetUncompressedPath(const std::filesystem::path& path)
+	{
+		s_uncompressedPath = path;
+	}
+
 protected:
 	virtual bool load(FileCoder& coder)                 = 0;
 	virtual void dump(FileCoder& coder) const           = 0;
 	virtual nlohmann::ordered_json toJson() const       = 0;
 	virtual void patch(const nlohmann::ordered_json& j) = 0;
 
+private:
+	std::filesystem::path getUncompressedPath() const
+	{
+		if (!s_uncompressedPath.empty())
+		{
+			// Make sure the target folder exists
+			if (!std::filesystem::exists(s_uncompressedPath))
+				std::filesystem::create_directories(s_uncompressedPath);
+		}
+
+		return s_uncompressedPath / ::GetFileName(m_fileName);
+	}
+
 protected:
 	tString m_fileName;
 	MagicNumber m_magic;
+	bool m_saveUncompressed;
 	WolfFileType m_fileType;
 	uInts m_seedIndices = {};
 
 	Bytes m_cryptHeader = {};
+
+private:
+	static inline std::filesystem::path s_uncompressedPath = "";
 };

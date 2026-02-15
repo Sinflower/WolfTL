@@ -281,6 +281,14 @@ public:
 		return *(m_pData + offset);
 	}
 
+	void DumpToFile(const std::wstring& filename) const
+	{
+		std::ofstream file(filename, std::ios::out | std::ios::binary);
+		if (!file.is_open())
+			throw(FileWalkerException(L"Failed to open file for dumping: " + filename));
+		file.write(reinterpret_cast<const char*>(m_pData), m_size);
+	}
+
 private:
 	void close()
 	{

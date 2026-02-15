@@ -38,15 +38,15 @@
 class GameDat : public WolfDataBase
 {
 public:
-	explicit GameDat(const tString& fileName = L"") :
-		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::GameDat, SEED_INDICES)
+	explicit GameDat(const tString& fileName = L"", const bool& saveUncompressed = false) :
+		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::GameDat, saveUncompressed, SEED_INDICES)
 	{
 		if (!fileName.empty())
 			Load(fileName);
 	}
 
 	explicit GameDat(const Bytes& buffer) :
-		WolfDataBase(L"Game.dat", MAGIC_NUMBER, WolfFileType::GameDat, SEED_INDICES)
+		WolfDataBase(L"Game.dat", MAGIC_NUMBER, WolfFileType::GameDat, false, SEED_INDICES)
 	{
 		Load(buffer);
 	}

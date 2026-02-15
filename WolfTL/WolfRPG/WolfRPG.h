@@ -37,12 +37,14 @@
 class WolfRPG
 {
 public:
-	explicit WolfRPG(const tString& dataPath, const bool& skipGD = false) :
+	explicit WolfRPG(const tString& dataPath, const bool& skipGD = false, const bool& saveUncompressed = false) :
 		m_dataPath(dataPath),
-		m_skipGD(skipGD)
+		m_skipGD(skipGD),
+		m_saveUncompressed(saveUncompressed)
 	{
 		try
 		{
+			WolfDataBase::SetUncompressedPath("uncompressed");
 			loadGameDat();
 			loadCommonEvents();
 			loadDatabases();
@@ -162,7 +164,7 @@ private:
 
 		std::cout << "Loading Game.dat ... " << std::flush;
 
-		m_gameDat = GameDat(m_dataPath + L"/BasicData/Game.dat");
+		m_gameDat = GameDat(m_dataPath + L"/BasicData/Game.dat", m_saveUncompressed);
 
 		std::cout << "Done" << std::endl;
 	}
@@ -185,7 +187,7 @@ private:
 				std::wcout << "\rLoading Map: " << p.path().filename() << std::setfill(TCHAR(' ')) << std::setw(prevLength) << "" << std::flush;
 				prevLength = tString(p.path().filename()).length();
 				tString file(p.path());
-				m_maps.push_back(Map(file));
+				m_maps.push_back(Map(file, m_saveUncompressed));
 			}
 		}
 
@@ -196,7 +198,7 @@ private:
 	{
 		std::cout << "Loading CommonEvents ... " << std::flush;
 
-		m_commonEvents = CommonEvents(m_dataPath + L"/BasicData/CommonEvent.dat");
+		m_commonEvents = CommonEvents(m_dataPath + L"/BasicData/CommonEvent.dat", m_saveUncompressed);
 
 		std::cout << "Done" << std::endl;
 	}
@@ -235,6 +237,7 @@ private:
 private:
 	tString m_dataPath;
 	bool m_skipGD;
+	bool m_saveUncompressed;
 
 	GameDat m_gameDat;
 	Maps m_maps;

@@ -79,10 +79,10 @@ class WolfTL
 	inline static const tString PATCHED_DATA = TEXT("patched/data/");
 
 public:
-	WolfTL(const fs::path& dataPath, const fs::path& outputPath, const bool& skipGD = false) :
+	WolfTL(const fs::path& dataPath, const fs::path& outputPath, const bool& skipGD = false, const bool& saveUncompressed = false) :
 		m_dataPath(dataPath),
 		m_outputPath(outputPath),
-		m_wolf(dataPath, skipGD),
+		m_wolf(dataPath, skipGD, saveUncompressed),
 		m_skipGD(skipGD)
 	{
 	}
@@ -270,18 +270,22 @@ int main(int argc, char* argv[])
 
 	tString dataFolder;
 	tString outputFolder;
-	bool skipGameDat  = false;
-	bool inplacePatch = false;
+	bool skipGameDat      = false;
+	bool inplacePatch     = false;
+	bool bCreate          = false;
+	bool bPatch           = false;
+	bool saveUncompressed = false;
 
 	app.add_option("DATA_PATH", dataFolder, "Path to the data folder of the Wolf RPG game")->required();
 	app.add_option("OUTPUT_PATH", outputFolder, "Path to the output folder, in patch mode this is the folder containing the created dump")->required();
 	app.add_flag("--skip-game_dat", skipGameDat, "Skip the processing of Game.dat");
 	app.add_flag("--inplace", inplacePatch, "Apply the patch in place, i.e., override the original data files");
+	app.add_flag("-s,--save_uncompressed", saveUncompressed, "Saves uncompressed versions of compressed files for debugging"); // TODO: implement this
 
-	auto* pCreateCmd = app.add_subcommand("create", "Create the patch");
-	auto* pPatchCmd  = app.add_subcommand("patch", "Apply the patch");
-
-	app.require_subcommand(1);
+	auto* pOperation = app.add_option_group("Operation", "Operation to perform")->fallthrough();
+	pOperation->add_flag("--create", bCreate, "Create a patch from the game data");
+	pOperation->add_flag("--patch", bPatch, "Apply a patch to the game data");
+	pOperation->require_option(1);
 
 	CLI11_PARSE(app, argc, argv);
 
@@ -293,11 +297,11 @@ int main(int argc, char* argv[])
 
 	try
 	{
-		WolfTL wolf(dataPath, outputPath, skipGameDat);
+		WolfTL wolf(dataPath, outputPath, skipGameDat, saveUncompressed);
 
-		if (*pCreateCmd)
+		if (bCreate)
 			wolf.ToJson();
-		else if (*pPatchCmd)
+		else if (bPatch)
 			wolf.Patch(inplacePatch);
 		else
 			std::wcerr << L"No valid mode selected" << std::endl;

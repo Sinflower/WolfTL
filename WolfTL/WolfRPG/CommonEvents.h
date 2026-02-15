@@ -303,8 +303,8 @@ public:
 	{
 	}
 
-	explicit CommonEvents(const tString& fileName) :
-		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::CommonEvent, SEED_INDICES),
+	explicit CommonEvents(const tString& fileName, const bool& saveUncompressed = false) :
+		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::CommonEvent, saveUncompressed, SEED_INDICES),
 		m_valid(false)
 	{
 		if (!fileName.empty())
