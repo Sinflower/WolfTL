@@ -45,9 +45,8 @@ public:
 			Load(fileName);
 	}
 
-	explicit GameDat(const Bytes& buffer, const bool& ignoreFilesizeDiff = false) :
-		WolfDataBase(L"Game.dat", MAGIC_NUMBER, WolfFileType::GameDat, SEED_INDICES),
-		m_ignoreFilesizeDiff(ignoreFilesizeDiff)
+	explicit GameDat(const Bytes& buffer) :
+		WolfDataBase(L"Game.dat", MAGIC_NUMBER, WolfFileType::GameDat, SEED_INDICES)
 	{
 		Load(buffer);
 	}
@@ -124,9 +123,6 @@ protected:
 		m_unknownWordData = coder.Read(m_unknownWordSize * 2);
 		m_intOffset1      = coder.ReadInt();
 		m_intOffset2      = coder.ReadInt();
-
-		if (!m_ignoreFilesizeDiff && (m_fileSize != m_oldSize))
-			throw WolfRPGException(ERROR_TAG + std::format("Game.dat has different size than expected - expected: {} - got: {}", m_fileSize, m_oldSize));
 
 		m_unknown2 = coder.Read();
 
@@ -276,8 +272,6 @@ private:
 	Bytes m_unknown2           = {};
 
 	uint32_t m_oldSize = 0;
-
-	bool m_ignoreFilesizeDiff = false;
 
 	inline static const uInts SEED_INDICES{ 0, 8, 6 };
 	inline static const MagicNumber MAGIC_NUMBER{ { 0x57, 0x00, 0x00, 0x4f, 0x4c, 0x00, 0x46, 0x4d, 0x00 }, 8 };
