@@ -428,7 +428,7 @@ protected:
 		if (m_version >= 0x67)
 		{
 			m_unknown4 = coder.ReadInt();
-			m_unknown5 = coder.ReadInt();
+			m_layerCnt = coder.ReadInt();
 
 			Command::Command::s_v35 = true;
 		}
@@ -445,7 +445,7 @@ protected:
 		}
 
 		if (readTiles)
-			m_tiles = coder.Read(m_width * m_height * 3 * 4);
+			m_tiles = coder.Read(m_width * m_height * m_layerCnt * 4);
 
 		uint8_t indicator = 0x0;
 		while ((indicator = coder.ReadByte()) == EVENT_INDICATOR)
@@ -500,7 +500,7 @@ protected:
 		if (m_version >= 0x67)
 		{
 			pCoder->WriteInt(m_unknown4);
-			pCoder->WriteInt(m_unknown5);
+			pCoder->WriteInt(m_layerCnt);
 		}
 
 		if (FileCoder::IsUTF8() && m_tiles.empty())
@@ -545,7 +545,7 @@ private:
 	uint8_t m_unknown2  = 0;
 	tString m_unknown3  = TEXT("");
 	uint32_t m_unknown4 = 0;
-	uint32_t m_unknown5 = 0;
+	uint32_t m_layerCnt = 3; // Default layer count is 3, but sinze v3.5 it can be different for each map
 
 	uint32_t m_tilesetID = 0;
 	uint32_t m_width     = 0;
