@@ -38,9 +38,10 @@
 
 namespace fs = std::filesystem;
 
-constexpr std::string VERSION       = "0.5.3";
-constexpr std::string PROG_NAME     = "WolfTL";
-constexpr std::string PROG_WITH_VER = PROG_NAME + " v" + VERSION;
+constexpr std::string_view VERSION   = "0.5.3";
+constexpr std::string_view PROG_NAME = "WolfTL";
+
+static const std::string PROG_WITH_VER = std::string(PROG_NAME) + " v" + std::string(VERSION);
 
 /*
 TODO:
