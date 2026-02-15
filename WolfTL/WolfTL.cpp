@@ -32,11 +32,15 @@
 #include <iostream>
 #include <map>
 
+#include <CLI11/CLI11.hpp>
+
 #include "WolfRPG\WolfRPG.h"
 
 namespace fs = std::filesystem;
 
-static const std::string VERSION = "0.5.3";
+constexpr std::string VERSION       = "0.5.3";
+constexpr std::string PROG_NAME     = "WolfTL";
+constexpr std::string PROG_WITH_VER = PROG_NAME + " v" + VERSION;
 
 /*
 TODO:
@@ -259,66 +263,43 @@ private:
 
 int main(int argc, char* argv[])
 {
+	CLI::App app{ PROG_WITH_VER };
+	argv = app.ensure_utf8(argv);
+	app.set_version_flag("-v,--version", PROG_WITH_VER);
+
+	tString dataFolder;
+	tString outputFolder;
+	bool skipGameDat  = false;
+	bool inplacePatch = false;
+
+	app.add_option("DATA_PATH", dataFolder, "Path to the data folder of the Wolf RPG game")->required();
+	app.add_option("OUTPUT_PATH", outputFolder, "Path to the output folder, in patch mode this is the folder containing the created dump")->required();
+	app.add_flag("--skip-game_dat", skipGameDat, "Skip the processing of Game.dat");
+	app.add_flag("--inplace", inplacePatch, "Apply the patch in place, i.e., override the original data files");
+
+	auto* pCreateCmd = app.add_subcommand("create", "Create the patch");
+	auto* pPatchCmd  = app.add_subcommand("patch", "Apply the patch");
+
+	app.require_subcommand(1);
+
+	CLI11_PARSE(app, argc, argv);
+
+	// Needs to be done after CLI11_PARSE or the help printing does not work
 	EnableUTF8Print();
 
-	std::cout << "WolfTL v" << VERSION << std::endl;
-
-	if (argc < 4)
-	{
-		std::cout << "Usage: " << argv[0] << " <DATA-FOLDER> <OUTPUT-FOLDER> <MODE> [OPTION]" << std::endl;
-		std::cout << "Modes:" << std::endl;
-		std::cout << "  create    - Create the Patch" << std::endl;
-		std::cout << "  patch     - Apply the Patch" << std::endl;
-		std::cout << "  patch_ip  - Apply the Patch in place, i.e., override the original data files" << std::endl;
-		std::cout << "Options:" << std::endl;
-		std::cout << "  no_gd     - Skip Game.dat (currently always active)" << std::endl;
-		return 0;
-	}
-
-	LPWSTR* szArglist;
-	int32_t nArgs;
-
-	szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
-	if (szArglist == nullptr)
-	{
-		std::cout << "CommandLineToArgvW failed" << std::endl;
-		return -1;
-	}
-
-	const tString dataFolder   = szArglist[1];
-	const tString outputFolder = szArglist[2];
-	tString mode               = szArglist[3];
-
-	fs::path dataPath(dataFolder);
-	fs::path outputPath(outputFolder);
-
-	dataPath = fs::absolute(dataPath);
-	outputPath = fs::absolute(outputPath);
-
-	bool skipGameDat = true;
-
-	// if (argc >= 5)
-	//{
-	//	if (tString(szArglist[4]) == TEXT("no_gd"))
-	//		skipGameDat = true;
-	// }
-
-	// Convert to lowercase
-	std::transform(mode.begin(), mode.end(), mode.begin(), ::tolower);
-
-	LocalFree(szArglist);
+	fs::path dataPath   = fs::absolute(fs::path(dataFolder));
+	fs::path outputPath = fs::absolute(fs::path(outputFolder));
 
 	try
 	{
 		WolfTL wolf(dataPath, outputPath, skipGameDat);
-		if (mode == TEXT("create"))
+
+		if (*pCreateCmd)
 			wolf.ToJson();
-		else if (mode == TEXT("patch"))
-			wolf.Patch();
-		else if (mode == TEXT("patch_ip"))
-			wolf.Patch(true);
+		else if (*pPatchCmd)
+			wolf.Patch(inplacePatch);
 		else
-			std::wcerr << L"Invalid mode: " << mode << std::endl;
+			std::wcerr << L"No valid mode selected" << std::endl;
 	}
 	catch (const std::exception& e)
 	{
