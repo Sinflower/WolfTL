@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <filesystem>
 #include <string>
 #include <vector>
 #include <windows.h>
@@ -52,6 +53,7 @@ using Bytes    = std::vector<uint8_t>;
 using uInts    = std::vector<uint32_t>;
 using tString  = std::wstring;
 using tStrings = std::vector<tString>;
+using Paths    = std::vector<std::filesystem::path>;
 
 #define DISABLE_COPY_MOVE(T)             \
 	T(T const &)               = delete; \

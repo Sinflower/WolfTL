@@ -37,8 +37,9 @@
 class WolfRPG
 {
 public:
-	explicit WolfRPG(const tString& dataPath, const bool& skipGD = false, const bool& saveUncompressed = false) :
+	explicit WolfRPG(const tString& dataPath, const Paths& additionalMapPaths = {}, const bool& skipGD = false, const bool& saveUncompressed = false) :
 		m_dataPath(dataPath),
+		m_additionalMapPaths(additionalMapPaths),
 		m_skipGD(skipGD),
 		m_saveUncompressed(saveUncompressed)
 	{
@@ -49,6 +50,7 @@ public:
 			loadCommonEvents();
 			loadDatabases();
 			loadMaps();
+			loadAdditionalMaps();
 
 			m_valid = true;
 		}
@@ -101,6 +103,19 @@ public:
 		for (const Map& map : m_maps)
 			map.Dump(mapDataDir);
 		std::cout << "Done" << std::endl;
+
+		std::cout << "Writing additional Maps to file ... ";
+		for (const auto& [mapPath, maps] : m_additionalMaps)
+		{
+			std::filesystem::path relativePath = std::filesystem::relative(mapPath, m_dataPath);
+
+			tString additionalMapDir = outputPath + L"/" + relativePath.wstring();
+
+			checkAndCreateDir(additionalMapDir);
+			for (const Map& map : maps)
+				map.Dump(additionalMapDir);
+		}
+		std::cout << "Done" << std::endl;
 	}
 
 	GameDat& GetGameDat()
@@ -125,6 +140,18 @@ public:
 	{
 		checkValid();
 		return m_maps;
+	}
+
+	std::map<std::filesystem::path, Maps>& GetAdditionalMaps()
+	{
+		checkValid();
+		return m_additionalMaps;
+	}
+
+	const std::map<std::filesystem::path, Maps>& GetAdditionalMaps() const
+	{
+		checkValid();
+		return m_additionalMaps;
 	}
 
 	CommonEvents& GetCommonEvents()
@@ -194,6 +221,36 @@ private:
 		std::cout << "\rLoading Maps ... Done" << std::setfill(' ') << std::setw(prevLength) << "" << std::endl;
 	}
 
+	void loadAdditionalMaps()
+	{
+		for (const std::filesystem::path& mapPath : m_additionalMapPaths)
+		{
+			std::string relativePath = std::filesystem::relative(mapPath, m_dataPath).string();
+
+			if (!std::filesystem::exists(mapPath))
+			{
+				std::cerr << ERROR_TAG + "Additional map path does not exist: " << relativePath << std::endl;
+				continue;
+			}
+
+			std::cout << "Loading additional Maps from path: " << relativePath << " ... " << std::flush;
+
+			size_t prevLength = 0;
+			for (std::filesystem::directory_entry p : std::filesystem::directory_iterator(mapPath))
+			{
+				if (p.path().extension() == ".mps")
+				{
+					std::wcout << "\rLoading Map: " << p.path().filename() << std::setfill(TCHAR(' ')) << std::setw(prevLength) << "" << std::flush;
+					prevLength = tString(p.path().filename()).length();
+					tString file(p.path());
+					m_additionalMaps[mapPath].push_back(Map(file, m_saveUncompressed));
+				}
+			}
+
+			std::cout << "\rLoading additional Maps from path: " << relativePath << " ... Done" << std::setfill(' ') << std::setw(prevLength) << "" << std::endl;
+		}
+	}
+
 	void loadCommonEvents()
 	{
 		std::cout << "Loading CommonEvents ... " << std::flush;
@@ -236,11 +293,13 @@ private:
 
 private:
 	tString m_dataPath;
+	Paths m_additionalMapPaths;
 	bool m_skipGD;
 	bool m_saveUncompressed;
 
 	GameDat m_gameDat;
 	Maps m_maps;
+	std::map<std::filesystem::path, Maps> m_additionalMaps;
 	CommonEvents m_commonEvents;
 	Databases m_databases;
 

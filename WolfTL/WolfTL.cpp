@@ -47,6 +47,7 @@ static const std::string PROG_WITH_VER = std::string(PROG_NAME) + " v" + std::st
 TODO:
  - Add an option to ignore the name sanity check in the data patching
  - Rewrite error messages to use std::format
+ - Replace tString-based paths with std::filesystem::path
 */
 
 // From: https://stackoverflow.com/a/45588456
@@ -79,10 +80,10 @@ class WolfTL
 	inline static const tString PATCHED_DATA = TEXT("patched/data/");
 
 public:
-	WolfTL(const fs::path& dataPath, const fs::path& outputPath, const bool& skipGD = false, const bool& saveUncompressed = false) :
+	WolfTL(const fs::path& dataPath, const fs::path& outputPath, const Paths& additionalMapPaths, const bool& skipGD = false, const bool& saveUncompressed = false) :
 		m_dataPath(dataPath),
 		m_outputPath(outputPath),
-		m_wolf(dataPath, skipGD, saveUncompressed),
+		m_wolf(dataPath, additionalMapPaths, skipGD, saveUncompressed),
 		m_skipGD(skipGD)
 	{
 	}
@@ -140,6 +141,12 @@ private:
 
 		for (const Map& map : m_wolf.GetMaps())
 			map.ToJson(mapOutput);
+
+		for (const auto& [folder, maps] : m_wolf.GetAdditionalMaps())
+		{
+			for (const Map& map : maps)
+				map.ToJson(mapOutput);
+		}
 
 		std::cout << "Done" << std::endl;
 	}
@@ -201,6 +208,12 @@ private:
 
 		for (Map& map : m_wolf.GetMaps())
 			map.Patch(mapPatch);
+
+		for (auto& [folder, maps] : m_wolf.GetAdditionalMaps())
+		{
+			for (Map& map : maps)
+				map.Patch(mapPatch);
+		}
 
 		std::cout << "Done" << std::endl;
 	}
@@ -270,6 +283,7 @@ int main(int argc, char* argv[])
 
 	tString dataFolder;
 	tString outputFolder;
+	tStrings additionalMapFolders;
 	bool skipGameDat      = false;
 	bool inplacePatch     = false;
 	bool bCreate          = false;
@@ -280,7 +294,8 @@ int main(int argc, char* argv[])
 	app.add_option("OUTPUT_PATH", outputFolder, "Path to the output folder, in patch mode this is the folder containing the created dump")->required();
 	app.add_flag("--skip-game_dat", skipGameDat, "Skip the processing of Game.dat");
 	app.add_flag("--inplace", inplacePatch, "Apply the patch in place, i.e., override the original data files");
-	app.add_flag("-s,--save_uncompressed", saveUncompressed, "Saves uncompressed versions of compressed files for debugging"); // TODO: implement this
+	app.add_flag("-s,--save_uncompressed", saveUncompressed, "Saves uncompressed versions of compressed files for debugging");
+	app.add_option("-m,--map-folder", additionalMapFolders, "Additional folder to search for map files (can be specified multiple times)");
 
 	auto* pOperation = app.add_option_group("Operation", "Operation to perform")->fallthrough();
 	pOperation->add_flag("--create", bCreate, "Create a patch from the game data");
@@ -295,9 +310,30 @@ int main(int argc, char* argv[])
 	fs::path dataPath   = fs::absolute(fs::path(dataFolder));
 	fs::path outputPath = fs::absolute(fs::path(outputFolder));
 
+	// Build the list of additional map paths
+	Paths additionalMapPaths;
+	for (const tString& folder : additionalMapFolders)
+	{
+		// Check if the folder exists
+		if (!fs::exists(folder))
+		{
+			// A folder inside data might have been specified so also check if the folder exists relative to the data path
+			fs::path relativeFolder = dataPath / folder;
+			if (!fs::exists(relativeFolder))
+			{
+				std::wcerr << ERROR_TAGW << L"Additional map folder does not exist: " << folder << std::endl;
+				continue;
+			}
+			else
+				additionalMapPaths.push_back(fs::absolute(relativeFolder));
+		}
+		else
+			additionalMapPaths.push_back(fs::absolute(fs::path(folder)));
+	}
+
 	try
 	{
-		WolfTL wolf(dataPath, outputPath, skipGameDat, saveUncompressed);
+		WolfTL wolf(dataPath, outputPath, additionalMapPaths, skipGameDat, saveUncompressed);
 
 		if (bCreate)
 			wolf.ToJson();
