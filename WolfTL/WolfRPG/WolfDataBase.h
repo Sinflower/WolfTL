@@ -93,15 +93,23 @@ public:
 		return load(coder);
 	}
 
-	void Dump(const tString& outputDir) const
+	void Dump(const std::filesystem::path& outputPath, const std::filesystem::path& dataPath) const
 	{
 		// Reset the static variable for Command
 		Command::Command::s_v35 = false;
 
 		const tString fileName = ::GetFileName(m_fileName);
 		g_activeFile           = fileName;
-		tString outputFN       = outputDir + L"/" + fileName;
-		FileCoder coder(outputFN, FileCoder::Mode::WRITE, m_fileType, m_seedIndices);
+
+		// Get the relative path of the dataPath (absolute path to the data folder) and the parent path of the file, i.e., the difference between the two paths.
+		// This results in the subfolder structure which are required to produce the correct output path.
+		std::filesystem::path relativePath = std::filesystem::relative(std::filesystem::absolute(m_fileName).parent_path(), dataPath);
+		std::filesystem::path fullOutPath  = outputPath / relativePath / fileName;
+
+		// Make sure the target folder exists
+		CheckAndCreateDir(fullOutPath.parent_path());
+
+		FileCoder coder(fullOutPath.wstring(), FileCoder::Mode::WRITE, m_fileType, m_seedIndices);
 		dump(coder);
 	}
 

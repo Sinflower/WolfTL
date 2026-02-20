@@ -27,13 +27,12 @@
 #pragma once
 
 #include "Types.h"
+#include "WolfRPGException.h"
 
-#include <codecvt>
 #include <filesystem>
 #include <format>
 #include <iomanip>
 #include <iostream>
-#include <locale>
 #include <regex>
 #include <source_location>
 #include <sstream>
@@ -115,18 +114,6 @@ inline const tString GetFileNameNoExt(const tString& file)
 	return std::filesystem::path(file).stem().wstring();
 }
 
-inline std::wstring ToUTF16(const std::string& utf8String)
-{
-	static std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-	return conv.from_bytes(utf8String);
-}
-
-inline std::string ToUTF8(const std::wstring& utf16String)
-{
-	static std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
-	return conv.to_bytes(utf16String);
-}
-
 inline void CreateBackup(const tString& file)
 {
 	// If the skip backup flag is set, do not create a backup
@@ -182,6 +169,18 @@ inline bool FilenameAnyOf(const std::filesystem::path& path, const std::vector<s
 			return true;
 	}
 	return false;
+}
+
+inline void CheckAndCreateDir(const std::filesystem::path& path)
+{
+	if (!std::filesystem::exists(path))
+	{
+		if (!std::filesystem::create_directories(path))
+		{
+			if (!std::filesystem::exists(path))
+				throw WolfRPGException(ERROR_TAGW + L"Failed to create directory: " + path.wstring());
+		}
+	}
 }
 
 inline tString g_activeFile = L"";
