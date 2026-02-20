@@ -265,10 +265,6 @@ private:
 
 int main(int argc, char* argv[])
 {
-	CLI::App app{ PROG_WITH_VER };
-	argv = app.ensure_utf8(argv);
-	app.set_version_flag("-v,--version", PROG_WITH_VER);
-
 	tString dataFolder;
 	tString outputFolder;
 	bool skipGameDat      = false;
@@ -277,18 +273,66 @@ int main(int argc, char* argv[])
 	bool bPatch           = false;
 	bool saveUncompressed = false;
 
-	app.add_option("DATA_PATH", dataFolder, "Path to the data folder of the Wolf RPG game")->required();
-	app.add_option("OUTPUT_PATH", outputFolder, "Path to the output folder, in patch mode this is the folder containing the created dump")->required();
-	app.add_flag("--skip-game_dat", skipGameDat, "Skip the processing of Game.dat");
-	app.add_flag("--inplace", inplacePatch, "Apply the patch in place, i.e., override the original data files");
-	app.add_flag("-s,--save_uncompressed", saveUncompressed, "Saves uncompressed versions of compressed files for debugging");
+	std::string oldMode = "";
+	bool useOldArgs     = false;
 
-	auto* pOperation = app.add_option_group("Operation", "Operation to perform")->fallthrough();
-	pOperation->add_flag("--create", bCreate, "Create a patch from the game data");
-	pOperation->add_flag("--patch", bPatch, "Apply a patch to the game data");
-	pOperation->require_option(1);
+	// Deprecated argument parsing for backward compatibility, will be removed in a future version
+	if (argc >= 4)
+	{
+		oldMode = argv[3];
+		std::transform(oldMode.begin(), oldMode.end(), oldMode.begin(), ::tolower);
 
-	CLI11_PARSE(app, argc, argv);
+		if (oldMode == "create" || oldMode == "patch" || oldMode == "patch_ip")
+		{
+			std::cout << "NOTICE: Using deprecated command line arguments, these will be removed in the future, please switch to the new format. See --help for more information." << std::endl;
+			useOldArgs = true;
+
+			LPWSTR* szArglist;
+			int32_t nArgs;
+
+			szArglist = CommandLineToArgvW(GetCommandLineW(), &nArgs);
+			if (szArglist == nullptr)
+			{
+				std::cout << "CommandLineToArgvW failed" << std::endl;
+				return -1;
+			}
+
+			dataFolder   = szArglist[1];
+			outputFolder = szArglist[2];
+
+			LocalFree(szArglist);
+
+			if (oldMode == "create")
+				bCreate = true;
+			else if (oldMode == "patch")
+				bPatch = true;
+			else if (oldMode == "patch_ip")
+			{
+				bPatch       = true;
+				inplacePatch = true;
+			}
+		}
+	}
+
+	if (!useOldArgs)
+	{
+		CLI::App app{ PROG_WITH_VER };
+		argv = app.ensure_utf8(argv);
+		app.set_version_flag("-v,--version", PROG_WITH_VER);
+
+		app.add_option("DATA_PATH", dataFolder, "Path to the data folder of the Wolf RPG game")->required();
+		app.add_option("OUTPUT_PATH", outputFolder, "Path to the output folder, in patch mode this is the folder containing the created dump")->required();
+		app.add_flag("--skip-game_dat", skipGameDat, "Skip the processing of Game.dat");
+		app.add_flag("--inplace", inplacePatch, "Apply the patch in place, i.e., override the original data files");
+		app.add_flag("-s,--save_uncompressed", saveUncompressed, "Saves uncompressed versions of compressed files for debugging");
+
+		auto* pOperation = app.add_option_group("Operation", "Operation to perform")->fallthrough();
+		pOperation->add_flag("--create", bCreate, "Create a patch from the game data");
+		pOperation->add_flag("--patch", bPatch, "Apply a patch to the game data");
+		pOperation->require_option(1);
+
+		CLI11_PARSE(app, argc, argv);
+	}
 
 	// Needs to be done after CLI11_PARSE or the help printing does not work
 	EnableUTF8Print();
