@@ -303,42 +303,46 @@ public:
 	{
 	}
 
-	explicit CommonEvents(const tString& fileName, const bool& saveUncompressed = false) :
-		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::CommonEvent, saveUncompressed, SEED_INDICES),
+	explicit CommonEvents(const std::filesystem::path& filePath, const bool& saveUncompressed = false) :
+		WolfDataBase(filePath, MAGIC_NUMBER, WolfFileType::CommonEvent, saveUncompressed, SEED_INDICES),
 		m_valid(false)
 	{
-		if (!fileName.empty())
-			m_valid = Load(fileName);
+		if (!filePath.empty())
+			m_valid = Load(filePath);
 	}
 
-	void ToJson(const tString& outputFolder) const
+	void ToJson(const std::filesystem::path& outputPath) const
 	{
 		for (const CommonEvent& ev : m_events)
 		{
 			nlohmann::ordered_json j = ev.ToJson();
 
 			// Get the file name without the extension
-			const tString comEvName  = std::format(TEXT("{}_{}"), ev.GetID(), EscapePath(ev.GetName()));
-			const tString outputFile = outputFolder + L"/" + comEvName + L".json";
+			const tString comEvName = std::format(TEXT("{}_{}"), ev.GetID(), EscapePath(ev.GetName()));
 
-			std::ofstream out(outputFile);
+			std::filesystem::path outputFilePath = outputPath / comEvName;
+			outputFilePath += ".json"; // Don't use replace_extension here in case the filename contains a dot
+
+			std::ofstream out(outputFilePath);
 			out << j.dump(4);
 
 			out.close();
 		}
 	}
 
-	void Patch(const tString& patchFolder)
+	void Patch(const std::filesystem::path& patchFolderPath)
 	{
 		for (CommonEvent& ev : m_events)
 		{
 			const tString comEvName = std::format(TEXT("{}_{}"), ev.GetID(), EscapePath(ev.GetName()));
-			const tString patchFile = patchFolder + L"/" + comEvName + L".json";
 
-			if (!std::filesystem::exists(patchFile))
-				throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFile);
+			std::filesystem::path patchFilePath = patchFolderPath / comEvName;
+			patchFilePath += ".json"; // Don't use replace_extension here in case the filename contains a dot
 
-			std::ifstream in(patchFile);
+			if (!std::filesystem::exists(patchFilePath))
+				throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFilePath.wstring());
+
+			std::ifstream in(patchFilePath);
 			nlohmann::ordered_json j;
 			in >> j;
 			in.close();

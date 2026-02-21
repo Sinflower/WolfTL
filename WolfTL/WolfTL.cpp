@@ -47,7 +47,6 @@ static const std::string PROG_WITH_VER = std::string(PROG_NAME) + " v" + std::st
 TODO:
  - Add an option to ignore the name sanity check in the data patching
  - Rewrite error messages to use std::format
- - Replace tString-based paths with std::filesystem::path
 */
 
 // From: https://stackoverflow.com/a/45588456
@@ -73,11 +72,11 @@ void EnableUTF8Print()
 
 class WolfTL
 {
-	inline static const tString OUTPUT_DIR   = TEXT("dump/");
-	inline static const tString MAP_OUTPUT   = OUTPUT_DIR + TEXT("mps/");
-	inline static const tString DB_OUTPUT    = OUTPUT_DIR + TEXT("db/");
-	inline static const tString COM_OUTPUT   = OUTPUT_DIR + TEXT("common/");
-	inline static const tString PATCHED_DATA = TEXT("patched/data/");
+	inline static const std::filesystem::path OUTPUT_DIR   = "dump";
+	inline static const std::filesystem::path MAP_OUTPUT   = OUTPUT_DIR / "mps";
+	inline static const std::filesystem::path DB_OUTPUT    = OUTPUT_DIR / "db";
+	inline static const std::filesystem::path COM_OUTPUT   = OUTPUT_DIR / "common";
+	inline static const std::filesystem::path PATCHED_DATA = "patched/data";
 
 public:
 	WolfTL(const fs::path& dataPath, const fs::path& outputPath, const bool& skipGD = false, const bool& saveUncompressed = false) :
@@ -134,7 +133,7 @@ private:
 	{
 		std::cout << "Writing Maps to JSON ... " << std::flush;
 
-		const tString mapOutput = m_outputPath / MAP_OUTPUT;
+		const std::filesystem::path mapOutput = m_outputPath / MAP_OUTPUT;
 
 		// Make sure the output folder exists
 		fs::create_directories(mapOutput);
@@ -149,7 +148,7 @@ private:
 	{
 		std::cout << "Writing Databases to JSON ... " << std::flush;
 
-		const tString dbOutput = m_outputPath / DB_OUTPUT;
+		const std::filesystem::path dbOutput = m_outputPath / DB_OUTPUT;
 
 		// Make sure the output folder exists
 		fs::create_directories(dbOutput);
@@ -164,7 +163,7 @@ private:
 	{
 		std::cout << "Writing CommonEvents to JSON ... " << std::flush;
 
-		const tString comOutput = m_outputPath / COM_OUTPUT;
+		const std::filesystem::path comOutput = m_outputPath / COM_OUTPUT;
 
 		// Make sure the output folder exists
 		fs::create_directories(comOutput);
@@ -180,7 +179,7 @@ private:
 
 		std::cout << "Writing GameDat to JSON ... " << std::flush;
 
-		const tString gameDatOutput = m_outputPath / OUTPUT_DIR;
+		const std::filesystem::path gameDatOutput = m_outputPath / OUTPUT_DIR;
 
 		m_wolf.GetGameDat().ToJson(gameDatOutput);
 
@@ -191,7 +190,7 @@ private:
 	{
 		std::cout << "Patching Maps ... " << std::flush;
 
-		const tString mapPatch = patchFolder / MAP_OUTPUT;
+		const std::filesystem::path mapPatch = patchFolder / MAP_OUTPUT;
 
 		// Check if the patch folder exists
 		if (!fs::exists(mapPatch))
@@ -210,7 +209,7 @@ private:
 	{
 		std::cout << "Patching Databases ... " << std::flush;
 
-		const tString dbPatch = patchFolder / DB_OUTPUT;
+		const std::filesystem::path dbPatch = patchFolder / DB_OUTPUT;
 
 		// Check if the patch folder exists
 		if (!fs::exists(dbPatch))
@@ -229,7 +228,7 @@ private:
 	{
 		std::cout << "Patching CommonEvents ... " << std::flush;
 
-		const tString comPatch = patchFolder / COM_OUTPUT;
+		const std::filesystem::path comPatch = patchFolder / COM_OUTPUT;
 
 		// Check if the patch folder exists
 		if (!fs::exists(comPatch))
@@ -249,7 +248,7 @@ private:
 
 		std::cout << "Patching GameDat ... " << std::flush;
 
-		const tString gameDatPatch = patchFolder / OUTPUT_DIR;
+		const std::filesystem::path gameDatPatch = patchFolder / OUTPUT_DIR;
 
 		m_wolf.GetGameDat().Patch(gameDatPatch);
 

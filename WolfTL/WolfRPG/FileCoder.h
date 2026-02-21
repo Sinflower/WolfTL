@@ -113,7 +113,7 @@ public:
 	// Disable Copy/Move constructor
 	DISABLE_COPY_MOVE(FileCoder)
 
-	FileCoder(const tString& fileName, const Mode& mode, const WolfFileType& fileType, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
+	FileCoder(const std::filesystem::path& filePath, const Mode& mode, const WolfFileType& fileType, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
 		m_cryptHeader(cryptHeader),
 		m_mode(mode),
 		m_seedIndices(seedIndices),
@@ -121,15 +121,15 @@ public:
 	{
 		if (mode == Mode::READ)
 		{
-			m_reader.Open(fileName);
+			m_reader.Open(filePath);
 			load();
 		}
 		else if (mode == Mode::WRITE)
 		{
 			if (s_createBackup)
-				CreateBackup(fileName);
+				CreateBackup(filePath);
 
-			m_writer.Open(fileName);
+			m_writer.Open(filePath);
 
 			if (!m_seedIndices.empty() && !cryptHeader.empty())
 			{

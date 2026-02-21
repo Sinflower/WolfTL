@@ -38,11 +38,11 @@
 class GameDat : public WolfDataBase
 {
 public:
-	explicit GameDat(const tString& fileName = L"", const bool& saveUncompressed = false) :
-		WolfDataBase(fileName, MAGIC_NUMBER, WolfFileType::GameDat, saveUncompressed, SEED_INDICES)
+	explicit GameDat(const std::filesystem::path& filePath = "", const bool& saveUncompressed = false) :
+		WolfDataBase(filePath, MAGIC_NUMBER, WolfFileType::GameDat, saveUncompressed, SEED_INDICES)
 	{
-		if (!fileName.empty())
-			Load(fileName);
+		if (!filePath.empty())
+			Load(filePath);
 	}
 
 	explicit GameDat(const Bytes& buffer) :

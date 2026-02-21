@@ -37,7 +37,7 @@
 class WolfRPG
 {
 public:
-	explicit WolfRPG(const tString& dataPath, const bool& skipGD = false, const bool& saveUncompressed = false) :
+	explicit WolfRPG(const std::filesystem::path& dataPath, const bool& skipGD = false, const bool& saveUncompressed = false) :
 		m_dataPath(dataPath),
 		m_skipGD(skipGD),
 		m_saveUncompressed(saveUncompressed)
@@ -73,7 +73,7 @@ public:
 	{
 		checkValid();
 
-		tString basicDataDir = outputPath / L"BasicData/";
+		std::filesystem::path basicDataDir = outputPath / "BasicData";
 
 		CheckAndCreateDir(basicDataDir);
 
@@ -160,7 +160,7 @@ private:
 
 		std::cout << "Loading Game.dat ... " << std::flush;
 
-		m_gameDat = GameDat(m_dataPath + L"/BasicData/Game.dat", m_saveUncompressed);
+		m_gameDat = GameDat(m_dataPath / "BasicData/Game.dat", m_saveUncompressed);
 
 		std::cout << "Done" << std::endl;
 	}
@@ -172,12 +172,12 @@ private:
 		size_t prevLength = 0;
 		for (std::filesystem::directory_entry p : std::filesystem::recursive_directory_iterator(m_dataPath))
 		{
-			if (p.path().extension() == ".mps")
+			std::filesystem::path pp = p.path();
+			if (pp.extension() == ".mps")
 			{
-				std::wcout << "\rLoading Map: " << p.path().filename() << std::setfill(TCHAR(' ')) << std::setw(prevLength) << "" << std::flush;
-				prevLength = tString(p.path().filename()).length();
-				tString file(p.path());
-				m_maps.push_back(Map(file, m_saveUncompressed));
+				std::wcout << "\rLoading Map: " << pp.filename() << std::setfill(TCHAR(' ')) << std::setw(prevLength) << "" << std::flush;
+				prevLength = pp.filename().wstring().length();
+				m_maps.push_back(Map(pp, m_saveUncompressed));
 			}
 		}
 
@@ -188,7 +188,7 @@ private:
 	{
 		std::cout << "Loading CommonEvents ... " << std::flush;
 
-		m_commonEvents = CommonEvents(m_dataPath + L"/BasicData/CommonEvent.dat", m_saveUncompressed);
+		m_commonEvents = CommonEvents(m_dataPath / "BasicData/CommonEvent.dat", m_saveUncompressed);
 
 		std::cout << "Done" << std::endl;
 	}
@@ -197,14 +197,14 @@ private:
 	{
 		std::cout << "Loading Databases ... " << std::flush;
 
-		for (std::filesystem::directory_entry p : std::filesystem::directory_iterator(m_dataPath + L"/BasicData/"))
+		for (std::filesystem::directory_entry p : std::filesystem::directory_iterator(m_dataPath / "BasicData"))
 		{
 			std::filesystem::path pp = p.path();
 			if (pp.extension() == ".project" && pp.filename() != "SysDataBaseBasic.project")
 			{
-				tString projectFile(p.path());
-				pp.replace_extension(".dat");
-				tString datFile(pp);
+				std::filesystem::path projectFile = pp;
+				std::filesystem::path datFile = pp;
+				datFile.replace_extension(".dat");
 				m_databases.push_back(Database(projectFile, datFile));
 			}
 		}
@@ -213,7 +213,7 @@ private:
 	}
 
 private:
-	tString m_dataPath;
+	std::filesystem::path m_dataPath;
 	bool m_skipGD;
 	bool m_saveUncompressed;
 

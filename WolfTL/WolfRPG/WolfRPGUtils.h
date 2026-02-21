@@ -104,29 +104,32 @@ inline std::wstring Dec2HexW(T i)
 	return stream.str();
 }
 
-inline const tString GetFileName(const tString& file)
+inline const std::filesystem::path GetFileName(const std::filesystem::path& file)
 {
-	return std::filesystem::path(file).filename();
+	return file.filename();
 }
 
-inline const tString GetFileNameNoExt(const tString& file)
+inline const std::filesystem::path GetFileNameNoExt(const std::filesystem::path& file)
 {
-	return std::filesystem::path(file).stem().wstring();
+	return file.stem();
 }
 
-inline void CreateBackup(const tString& file)
+inline void CreateBackup(const std::filesystem::path& filePath)
 {
 	// If the skip backup flag is set, do not create a backup
 	if (wolfRPGUtils::g_skipBackup) return;
 
 	// If the file does not exist, do not create a backup
-	if (!std::filesystem::exists(file)) return;
+	if (!std::filesystem::exists(filePath)) return;
+
+	std::filesystem::path bakPath = filePath;
+	bakPath += ".bak";
 
 	// If the backup file already exists, do not create a new backup
-	if (std::filesystem::exists(file + L".bak")) return;
+	if (std::filesystem::exists(bakPath)) return;
 
 	// Create a backup of the file
-	std::filesystem::copy_file(file, file + L".bak");
+	std::filesystem::copy_file(filePath, bakPath);
 }
 
 inline tString StrReplaceAll(tString str, const tString& from, const tString& to)
@@ -183,4 +186,4 @@ inline void CheckAndCreateDir(const std::filesystem::path& path)
 	}
 }
 
-inline tString g_activeFile = L"";
+inline std::filesystem::path g_activeFile = L"";

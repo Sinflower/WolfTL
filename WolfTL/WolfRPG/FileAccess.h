@@ -29,6 +29,7 @@
 
 #include <codecvt>
 #include <exception>
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -70,12 +71,10 @@ class FileReader
 {
 public:
 	FileReader() {}
-	FileReader(const std::string& filename, const DWORD& startOffset = -1) :
-		FileReader(fileAccessUtils::s2ws(filename), startOffset) {}
 
-	FileReader(const std::wstring& filename, const DWORD& startOffset = -1)
+	FileReader(const std::filesystem::path& filePath, const DWORD& startOffset = -1)
 	{
-		Open(filename, startOffset);
+		Open(filePath, startOffset);
 	}
 
 	FileReader(const std::vector<BYTE>& dataVec)
@@ -103,17 +102,17 @@ public:
 		m_init    = true;
 	}
 
-	void Open(const std::wstring& filename, const DWORD& startOffset = -1)
+	void Open(const std::filesystem::path& filePath, const DWORD& startOffset = -1)
 	{
-		m_pFile = CreateFileW(filename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		m_pFile = CreateFileW(filePath.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (m_pFile == nullptr)
-			throw(FileWalkerException(L"Failed to open file: " + filename));
+			throw(FileWalkerException(L"Failed to open file: " + filePath.wstring()));
 
 		m_pFileMap = CreateFileMappingW(m_pFile, NULL, PAGE_READONLY, 0, 0, NULL);
 		if (m_pFileMap == nullptr)
 		{
 			CloseHandle(m_pFile);
-			throw(FileWalkerException(L"Failed to create file mapping for: " + filename));
+			throw(FileWalkerException(L"Failed to create file mapping for: " + filePath.wstring()));
 		}
 
 		m_pMapView = MapViewOfFile(m_pFileMap, FILE_MAP_READ, 0, 0, 0);
@@ -121,7 +120,7 @@ public:
 		{
 			CloseHandle(m_pFileMap);
 			CloseHandle(m_pFile);
-			throw(FileWalkerException(L"Failed to create map view of file: " + filename));
+			throw(FileWalkerException(L"Failed to create map view of file: " + filePath.wstring()));
 		}
 
 		m_pData = reinterpret_cast<PBYTE>(m_pMapView);
@@ -365,23 +364,20 @@ class FileWriter
 {
 public:
 	FileWriter() {}
-	FileWriter(const std::string& filename) :
-		FileWriter(fileAccessUtils::s2ws(filename)) {}
-
-	FileWriter(const std::wstring& filename)
+	FileWriter(const std::filesystem::path& filePath)
 	{
-		Open(filename);
+		Open(filePath);
 	}
 
 	// Disable copy constructor and copy assignment operator
 	FileWriter(const FileWriter&)            = delete;
 	FileWriter& operator=(const FileWriter&) = delete;
 
-	void Open(const std::wstring& filename)
+	void Open(const std::filesystem::path& filePath)
 	{
-		m_file = std::fstream(filename, std::ios::out | std::ios::binary);
+		m_file = std::fstream(filePath, std::ios::out | std::ios::binary);
 		if (!m_file.is_open())
-			throw(FileWriterException("Failed to open file"));
+			throw(FileWriterException(std::format(L"Failed to open file {}", filePath.wstring())));
 		m_bufferMode = false;
 	}
 
@@ -423,16 +419,11 @@ public:
 		m_size = 0;
 	}
 
-	void WriteToFile(const std::string& filename)
-	{
-		WriteToFile(fileAccessUtils::s2ws(filename));
-	}
-
-	void WriteToFile(const std::wstring& filename)
+	void WriteToFile(const std::filesystem::path& filePath)
 	{
 		if (m_bufferMode)
 		{
-			std::ofstream file(filename, std::ios::out | std::ios::binary);
+			std::ofstream file(filePath, std::ios::out | std::ios::binary);
 			file.write(reinterpret_cast<const char*>(m_buffer.data()), m_buffer.size());
 		}
 	}
