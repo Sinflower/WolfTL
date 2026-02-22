@@ -1,5 +1,5 @@
 /*
- *  File: RouteCommand.h
+ *  File: WolfRPGException.hpp
  *  Copyright (c) 2024 Sinflower
  *
  *  MIT License
@@ -26,41 +26,38 @@
 
 #pragma once
 
-#include "FileCoder.h"
-#include "WolfRPGUtils.h"
+#include <exception>
+#include <string>
 
-class RouteCommand
+#include "StringConv.hpp"
+
+class WolfRPGException : public std::exception
 {
 public:
-	RouteCommand() = default;
-
-	bool Init(FileCoder& coder)
+	explicit WolfRPGException(const char* pWhat) :
+		m_what(pWhat)
 	{
-		m_id              = coder.ReadByte();
-		uint32_t argCount = coder.ReadByte();
-
-		for (uint32_t i = 0; i < argCount; i++)
-			m_args.push_back(coder.ReadInt());
-
-		VERIFY_MAGIC(coder, TERMINATOR);
-
-		return true;
 	}
 
-	void Dump(FileCoder& coder) const
+	explicit WolfRPGException(const std::string& what) :
+		m_what(what)
 	{
-		coder.WriteByte(m_id);
-		coder.WriteByte((uint8_t)m_args.size());
-		for (uint32_t arg : m_args)
-			coder.WriteInt(arg);
-		coder.Write(TERMINATOR);
+	}
+
+	explicit WolfRPGException(const std::wstring& what) :
+		m_what(ToUTF8(what))
+	{
+	}
+
+	virtual ~WolfRPGException() throw()
+	{
+	}
+
+	virtual const char* what() const throw()
+	{
+		return m_what.c_str();
 	}
 
 private:
-	uint8_t m_id = 0;
-	uInts m_args = {};
-
-	inline static const Bytes TERMINATOR{ 0x01, 0x00 };
+	std::string m_what;
 };
-
-using RouteCommands = std::vector<RouteCommand>;

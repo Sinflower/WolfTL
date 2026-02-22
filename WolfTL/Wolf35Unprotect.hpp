@@ -33,8 +33,8 @@
 #include <vector>
 
 // This depends on WolfRPG for the WolfFileType enum
-#include "WolfRPG/NewWolfCrypt.h"
-#include "WolfRPG/WolfRPG.h"
+#include "WolfRPG/NewWolfCrypt.hpp"
+#include "WolfRPG/WolfRPG.hpp"
 
 #include "WolfSha512.hpp"
 

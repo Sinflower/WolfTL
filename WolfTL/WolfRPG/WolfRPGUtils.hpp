@@ -1,5 +1,5 @@
 /*
- *  File: WolfRPGUtils.h
+ *  File: WolfRPGUtils.hpp
  *  Copyright (c) 2024 Sinflower
  *
  *  MIT License
@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "Types.h"
-#include "WolfRPGException.h"
+#include "Types.hpp"
+#include "WolfRPGException.hpp"
 
 #include <filesystem>
 #include <format>

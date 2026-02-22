@@ -1,5 +1,5 @@
 /*
- *  File: Types.h
+ *  File: Types.hpp
  *  Copyright (c) 2024 Sinflower
  *
  *  MIT License

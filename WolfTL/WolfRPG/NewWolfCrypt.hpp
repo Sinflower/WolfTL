@@ -1,5 +1,5 @@
 /*
- *  File: NewWolfCrypt.h
+ *  File: NewWolfCrypt.hpp
  *  Copyright (c) 2024 Sinflower
  *
  *  MIT License

@@ -1,5 +1,5 @@
 /*
- *  File: StringConv.h
+ *  File: StringConv.hpp
  *  Copyright (c) 2026 Sinflower
  *
  *  MIT License
