@@ -72,7 +72,7 @@ class FileReader
 public:
 	FileReader() {}
 
-	FileReader(const std::filesystem::path& filePath, const DWORD& startOffset = -1)
+	FileReader(const std::filesystem::path& filePath, const uint32_t& startOffset = 0)
 	{
 		Open(filePath, startOffset);
 	}
@@ -98,11 +98,15 @@ public:
 		m_offset  = 0;
 		m_dataVec = dataVec;
 		m_pData   = m_dataVec.data();
-		m_size    = static_cast<DWORD>(m_dataVec.size());
+
+		if (m_dataVec.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max()))
+			throw(FileWalkerException("Data size exceeds maximum uint32_t value"));
+
+		m_size    = static_cast<uint32_t>(m_dataVec.size());
 		m_init    = true;
 	}
 
-	void Open(const std::filesystem::path& filePath, const DWORD& startOffset = -1)
+	void Open(const std::filesystem::path& filePath, const uint32_t& startOffset = 0)
 	{
 		m_pFile = CreateFileW(filePath.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (m_pFile == nullptr)
@@ -179,32 +183,32 @@ public:
 	}
 
 	template<std::size_t S>
-	void ReadBytesArr(std::array<BYTE, S>& buffer, const DWORD& size = -1)
+	void ReadBytesArr(std::array<BYTE, S>& buffer, const uint32_t& size = -1)
 	{
 		if (size == -1)
-			ReadBytes(buffer.data(), static_cast<DWORD>(buffer.size()));
+			ReadBytes(buffer.data(), buffer.size());
 		else if (size <= buffer.size())
 			ReadBytes(buffer.data(), size);
 		else
 			throw(FileWalkerException("ReadBytesArr: size is larger than buffer size"));
 	}
 
-	void ReadBytesVec(std::vector<BYTE>& buffer, const DWORD& size = -1)
+	void ReadBytesVec(std::vector<BYTE>& buffer, const uint32_t& size = -1)
 	{
 		if (size == -1)
-			ReadBytes(buffer.data(), static_cast<DWORD>(buffer.size()));
+			ReadBytes(buffer.data(), buffer.size());
 		else if (size <= buffer.size())
 			ReadBytes(buffer.data(), size);
 		else
 			throw(FileWalkerException("ReadBytesVec: size is larger than buffer size"));
 	}
 
-	void ReadBytes(LPVOID pBuffer, std::size_t& size)
+	void ReadBytes(LPVOID pBuffer, const std::size_t& size)
 	{
-		ReadBytes(pBuffer, static_cast<DWORD>(size));
+		ReadBytes(pBuffer, static_cast<uint32_t>(size));
 	}
 
-	void ReadBytes(LPVOID pBuffer, const DWORD& size)
+	void ReadBytes(LPVOID pBuffer, const uint32_t& size)
 	{
 		if (!m_init)
 			throw(FileWalkerException("FileWalker not initialized"));
@@ -217,17 +221,17 @@ public:
 	}
 
 	template<typename T>
-	void ReadVec(std::vector<T>& buffer, const DWORD& dwordCnt = -1)
+	void ReadVec(std::vector<T>& buffer, const uint32_t& numElems = -1)
 	{
-		if (dwordCnt == -1)
+		if (numElems == -1)
 			ReadBytes(buffer.data(), buffer.size() * sizeof(T));
-		else if (dwordCnt <= buffer.size())
-			ReadBytes(buffer.data(), dwordCnt * sizeof(T));
+		else if (numElems <= buffer.size())
+			ReadBytes(buffer.data(), numElems * sizeof(T));
 		else
 			throw(FileWalkerException("ReadVec: size is larger than buffer size"));
 	}
 
-	void Seek(const DWORD& offset)
+	void Seek(const uint32_t& offset)
 	{
 		if (!m_init)
 			throw(FileWalkerException("FileWalker not initialized"));
@@ -238,7 +242,7 @@ public:
 		m_offset = offset;
 	}
 
-	void Skip(const DWORD& size)
+	void Skip(const uint32_t& size)
 	{
 		if (!m_init)
 			throw(FileWalkerException("FileWalker not initialized"));
@@ -254,12 +258,12 @@ public:
 		return m_pData + m_offset;
 	}
 
-	const DWORD& GetOffset() const
+	const uint32_t& GetOffset() const
 	{
 		return m_offset;
 	}
 
-	const DWORD& GetSize() const
+	const uint32_t& GetSize() const
 	{
 		return m_size;
 	}
@@ -269,7 +273,7 @@ public:
 		return m_offset >= m_size;
 	}
 
-	BYTE At(const DWORD& offset) const
+	BYTE At(const uint32_t& offset) const
 	{
 		if (!m_init)
 			throw(FileWalkerException("FileWalker not initialized"));
@@ -334,8 +338,8 @@ private:
 
 	PBYTE m_pData = nullptr;
 
-	DWORD m_offset = 0;
-	DWORD m_size   = 0;
+	uint32_t m_offset = 0;
+	uint32_t m_size   = 0;
 
 	std::vector<BYTE> m_dataVec = {};
 };
@@ -442,7 +446,7 @@ public:
 	}
 
 	template<std::size_t S>
-	void WriteBytesArr(const std::array<BYTE, S>& buffer, const DWORD& size = -1)
+	void WriteBytesArr(const std::array<BYTE, S>& buffer, const uint32_t& size = -1)
 	{
 		if (size == -1)
 			WriteBytes(buffer.data(), buffer.size());
@@ -452,7 +456,7 @@ public:
 			throw(FileWriterException("WriteBytesArr: size is larger than buffer size"));
 	}
 
-	void WriteBytesVec(const std::vector<BYTE>& buffer, const DWORD& size = -1)
+	void WriteBytesVec(const std::vector<BYTE>& buffer, const uint32_t& size = -1)
 	{
 		if (size == -1)
 			WriteBytes(buffer.data(), buffer.size());
@@ -464,15 +468,15 @@ public:
 
 	void WriteBytes(LPCVOID pBuffer, const int& size)
 	{
-		WriteBytes(pBuffer, static_cast<DWORD>(size));
+		WriteBytes(pBuffer, static_cast<uint32_t>(size));
 	}
 
 	void WriteBytes(LPCVOID pBuffer, const std::size_t& size)
 	{
-		WriteBytes(pBuffer, static_cast<DWORD>(size));
+		WriteBytes(pBuffer, static_cast<uint32_t>(size));
 	}
 
-	void WriteBytes(LPCVOID pBuffer, const DWORD& size)
+	void WriteBytes(LPCVOID pBuffer, const uint32_t& size)
 	{
 		m_size += size;
 		if (m_bufferMode)

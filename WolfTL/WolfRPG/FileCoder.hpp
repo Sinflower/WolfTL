@@ -210,7 +210,7 @@ public:
 	{
 	}
 
-	const DWORD& GetSize() const
+	const uint32_t& GetSize() const
 	{
 		return m_reader.GetSize();
 	}
@@ -229,7 +229,7 @@ public:
 	{
 		if (m_mode == Mode::READ)
 		{
-			DWORD o = m_reader.GetOffset() + pos;
+			uint32_t o = m_reader.GetOffset() + pos;
 			m_reader.Seek(o);
 		}
 	}
@@ -242,7 +242,7 @@ public:
 		return false;
 	}
 
-	Bytes Read(const size_t& size = -1)
+	Bytes Read(const std::size_t& size = -1)
 	{
 		Bytes data;
 
@@ -250,7 +250,7 @@ public:
 			data.resize(size);
 		else
 		{
-			DWORD remainingSize = m_reader.GetSize() - m_reader.GetOffset();
+			uint32_t remainingSize = m_reader.GetSize() - m_reader.GetOffset();
 			data.resize(remainingSize);
 		}
 
@@ -346,7 +346,7 @@ public:
 		s_isUTF8 = isUTF8;
 	}
 
-	void Skip(const DWORD& size)
+	void Skip(const uint32_t& size)
 	{
 		m_reader.Skip(size);
 	}
