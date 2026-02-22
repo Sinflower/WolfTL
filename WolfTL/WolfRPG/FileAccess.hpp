@@ -82,7 +82,7 @@ public:
 		Open(filePath, startOffset);
 	}
 
-	FileReader(const std::vector<BYTE>& dataVec)
+	FileReader(const std::vector<uint8_t>& dataVec)
 	{
 		InitData(dataVec);
 	}
@@ -96,7 +96,7 @@ public:
 		close();
 	}
 
-	void InitData(const std::vector<BYTE>& dataVec)
+	void InitData(const std::vector<uint8_t>& dataVec)
 	{
 		close();
 
@@ -162,7 +162,7 @@ public:
 	}
 
 	template<std::size_t S>
-	void ReadBytesArr(std::array<BYTE, S>& buffer, const uint32_t& size = -1)
+	void ReadBytesArr(std::array<uint8_t, S>& buffer, const uint32_t& size = -1)
 	{
 		if (size == -1)
 			ReadBytes(buffer.data(), buffer.size());
@@ -172,7 +172,7 @@ public:
 			throw(FileWalkerException("ReadBytesArr: size is larger than buffer size"));
 	}
 
-	void ReadBytesVec(std::vector<BYTE>& buffer, const uint32_t& size = -1)
+	void ReadBytesVec(std::vector<uint8_t>& buffer, const uint32_t& size = -1)
 	{
 		if (size == -1)
 			ReadBytes(buffer.data(), buffer.size());
@@ -182,12 +182,12 @@ public:
 			throw(FileWalkerException("ReadBytesVec: size is larger than buffer size"));
 	}
 
-	void ReadBytes(LPVOID pBuffer, const std::size_t& size)
+	void ReadBytes(void* pBuffer, const std::size_t& size)
 	{
 		ReadBytes(pBuffer, static_cast<uint32_t>(size));
 	}
 
-	void ReadBytes(LPVOID pBuffer, const uint32_t& size)
+	void ReadBytes(void* pBuffer, const uint32_t& size)
 	{
 		if (!m_init)
 			throw(FileWalkerException("FileWalker not initialized"));
@@ -232,7 +232,7 @@ public:
 		m_offset += size;
 	}
 
-	const PBYTE Get() const
+	const uint8_t* Get() const
 	{
 		return m_pData + m_offset;
 	}
@@ -252,7 +252,7 @@ public:
 		return m_offset >= m_size;
 	}
 
-	BYTE At(const uint32_t& offset) const
+	uint8_t At(const uint32_t& offset) const
 	{
 		if (!m_init)
 			throw(FileWalkerException("FileWalker not initialized"));
@@ -400,14 +400,13 @@ private:
 	int m_fd = -1;
 #endif
 
-	LPVOID m_pMapView = nullptr;
-
-	PBYTE m_pData = nullptr;
+	void* m_pMapView = nullptr;
+	uint8_t* m_pData = nullptr;
 
 	uint32_t m_offset = 0;
 	uint32_t m_size   = 0;
 
-	std::vector<BYTE> m_dataVec = {};
+	std::vector<uint8_t> m_dataVec = {};
 };
 
 class FileWriterException : public std::exception
@@ -457,17 +456,17 @@ public:
 			m_file.close();
 	}
 
-	PBYTE Get()
+	uint8_t* Get()
 	{
 		return m_buffer.data();
 	}
 
-	const std::vector<BYTE>& GetBuffer() const
+	const std::vector<uint8_t>& GetBuffer() const
 	{
 		return m_buffer;
 	}
 
-	void SetAt(const uint64_t& offset, const BYTE& value)
+	void SetAt(const uint64_t& offset, const uint8_t& value)
 	{
 		if (offset < m_buffer.size())
 			m_buffer[offset] = value;
@@ -512,7 +511,7 @@ public:
 	}
 
 	template<std::size_t S>
-	void WriteBytesArr(const std::array<BYTE, S>& buffer, const uint32_t& size = -1)
+	void WriteBytesArr(const std::array<uint8_t, S>& buffer, const uint32_t& size = -1)
 	{
 		if (size == -1)
 			WriteBytes(buffer.data(), buffer.size());
@@ -522,7 +521,7 @@ public:
 			throw(FileWriterException("WriteBytesArr: size is larger than buffer size"));
 	}
 
-	void WriteBytesVec(const std::vector<BYTE>& buffer, const uint32_t& size = -1)
+	void WriteBytesVec(const std::vector<uint8_t>& buffer, const uint32_t& size = -1)
 	{
 		if (size == -1)
 			WriteBytes(buffer.data(), buffer.size());
@@ -532,21 +531,21 @@ public:
 			throw(FileWriterException("WriteBytesVec: size is larger than buffer size"));
 	}
 
-	void WriteBytes(LPCVOID pBuffer, const int& size)
+	void WriteBytes(const void* pBuffer, const int& size)
 	{
 		WriteBytes(pBuffer, static_cast<uint32_t>(size));
 	}
 
-	void WriteBytes(LPCVOID pBuffer, const std::size_t& size)
+	void WriteBytes(const void* pBuffer, const std::size_t& size)
 	{
 		WriteBytes(pBuffer, static_cast<uint32_t>(size));
 	}
 
-	void WriteBytes(LPCVOID pBuffer, const uint32_t& size)
+	void WriteBytes(const void* pBuffer, const uint32_t& size)
 	{
 		m_size += size;
 		if (m_bufferMode)
-			m_buffer.insert(m_buffer.end(), static_cast<const BYTE*>(pBuffer), static_cast<const BYTE*>(pBuffer) + size);
+			m_buffer.insert(m_buffer.end(), static_cast<const uint8_t*>(pBuffer), static_cast<const uint8_t*>(pBuffer) + size);
 		else if (m_file.is_open())
 			m_file.write(static_cast<const char*>(pBuffer), size);
 		else
@@ -559,7 +558,7 @@ private:
 	{
 		m_size += sizeof(T);
 		if (m_bufferMode)
-			m_buffer.insert(m_buffer.end(), reinterpret_cast<const BYTE*>(&data), reinterpret_cast<const BYTE*>(&data) + sizeof(T));
+			m_buffer.insert(m_buffer.end(), reinterpret_cast<const uint8_t*>(&data), reinterpret_cast<const uint8_t*>(&data) + sizeof(T));
 		else if (m_file.is_open())
 			m_file.write(reinterpret_cast<const char*>(&data), sizeof(T));
 		else
@@ -567,8 +566,9 @@ private:
 	}
 
 private:
-	bool m_bufferMode          = true;
-	uint64_t m_size            = 0;
-	std::fstream m_file        = {};
-	std::vector<BYTE> m_buffer = {};
+	bool m_bufferMode   = true;
+	uint64_t m_size     = 0;
+	std::fstream m_file = {};
+
+	std::vector<uint8_t> m_buffer = {};
 };
