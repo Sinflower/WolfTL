@@ -34,7 +34,7 @@
 
 #include <CLI11/CLI11.hpp>
 
-#include "WolfRPG\WolfRPG.hpp"
+#include "WolfRPG/WolfRPG.hpp"
 
 namespace fs = std::filesystem;
 

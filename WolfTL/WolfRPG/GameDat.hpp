@@ -33,7 +33,7 @@
 #include "WolfRPGUtils.hpp"
 
 #include <iostream>
-#include <nlohmann\json.hpp>
+#include <nlohmann/json.hpp>
 
 class GameDat : public WolfDataBase
 {

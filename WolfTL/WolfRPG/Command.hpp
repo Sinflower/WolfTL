@@ -80,7 +80,7 @@ arg[0] >= 3000000 && arg[0] < 4000000
 
 #include <algorithm>
 #include <memory>
-#include <nlohmann\json.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Command
 {
