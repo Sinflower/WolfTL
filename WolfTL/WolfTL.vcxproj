@@ -146,7 +146,6 @@
     <ClInclude Include="3rdParty\lz4\lz4.h" />
     <ClInclude Include="3rdParty\nlohmann\json.hpp" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="StringConv.hpp" />
     <ClInclude Include="Wolf35Unprotect.hpp" />
     <ClInclude Include="WolfRPG\NewWolfCrypt.hpp" />
     <ClInclude Include="WolfRPG\Command.hpp" />
@@ -157,6 +156,7 @@
     <ClInclude Include="WolfRPG\GameDat.hpp" />
     <ClInclude Include="WolfRPG\Map.hpp" />
     <ClInclude Include="WolfRPG\RouteCommand.hpp" />
+    <ClInclude Include="WolfRPG\StringConv.hpp" />
     <ClInclude Include="WolfRPG\Types.hpp" />
     <ClInclude Include="WolfRPG\WolfDataBase.hpp" />
     <ClInclude Include="WolfRPG\WolfRPG.hpp" />
