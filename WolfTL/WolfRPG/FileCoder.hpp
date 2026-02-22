@@ -471,7 +471,7 @@ private:
 
 	static tString sjis2utf8(const Bytes& sjis)
 	{
-		const LPCCH pSJIS = reinterpret_cast<const LPCCH>(sjis.data());
+		const char* pSJIS = reinterpret_cast<const char*>(sjis.data());
 		int sjisSize      = MultiByteToWideChar(932, 0, pSJIS, -1, NULL, 0);
 
 		WCHAR* pUTF8 = new WCHAR[sjisSize + 1]();

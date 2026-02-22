@@ -185,7 +185,8 @@ using Fields = std::vector<Field>;
 class Data
 {
 public:
-	Data() = default;
+	// Don't use = default here to prevent potential issues with a vector of Data
+	Data() {}
 
 	explicit Data(FileCoder& coder)
 	{
