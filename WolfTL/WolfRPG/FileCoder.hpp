@@ -369,9 +369,9 @@ public:
 		m_writer.Write(data);
 	}
 
-	void DumpReader(const std::wstring& dumpFileName)
+	void DumpReader(const std::filesystem::path& dumpFilePath)
 	{
-		m_reader.DumpToFile(dumpFileName);
+		m_reader.DumpToFile(dumpFilePath);
 	}
 
 #ifdef BIT_64
