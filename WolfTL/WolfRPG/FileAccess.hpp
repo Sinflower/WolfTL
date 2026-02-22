@@ -25,7 +25,12 @@
  */
 
 #pragma once
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <fcntl.h>
+#include <sys/mman.h>
+#endif
 
 #include <codecvt>
 #include <exception>
@@ -102,39 +107,13 @@ public:
 		if (m_dataVec.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max()))
 			throw(FileWalkerException("Data size exceeds maximum uint32_t value"));
 
-		m_size    = static_cast<uint32_t>(m_dataVec.size());
-		m_init    = true;
+		m_size = static_cast<uint32_t>(m_dataVec.size());
+		m_init = true;
 	}
 
 	void Open(const std::filesystem::path& filePath, const uint32_t& startOffset = 0)
 	{
-		m_pFile = CreateFileW(filePath.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-		if (m_pFile == nullptr)
-			throw(FileWalkerException(L"Failed to open file: " + filePath.wstring()));
-
-		m_pFileMap = CreateFileMappingW(m_pFile, NULL, PAGE_READONLY, 0, 0, NULL);
-		if (m_pFileMap == nullptr)
-		{
-			CloseHandle(m_pFile);
-			throw(FileWalkerException(L"Failed to create file mapping for: " + filePath.wstring()));
-		}
-
-		m_pMapView = MapViewOfFile(m_pFileMap, FILE_MAP_READ, 0, 0, 0);
-		if (m_pMapView == nullptr)
-		{
-			CloseHandle(m_pFileMap);
-			CloseHandle(m_pFile);
-			throw(FileWalkerException(L"Failed to create map view of file: " + filePath.wstring()));
-		}
-
-		m_pData = reinterpret_cast<PBYTE>(m_pMapView);
-
-		m_size = GetFileSize(m_pFile, 0);
-
-		if (startOffset != -1)
-			m_offset = startOffset;
-
-		m_init = true;
+		open(filePath, startOffset);
 	}
 
 	bool IsEoF() const
@@ -293,7 +272,78 @@ public:
 	}
 
 private:
+	void open(const std::filesystem::path& filePath, const uint32_t& startOffset = 0)
+	{
+		// Load the file size first so it is available during opening, important for Linux mmap
+		m_size = static_cast<uint32_t>(std::filesystem::file_size(filePath));
+
+#ifdef _WIN32
+		openWin(filePath);
+#else
+		openLinux(filePath);
+#endif
+
+		m_offset = startOffset;
+		m_init   = true;
+	}
+
+#ifdef _WIN32
+	void openWin(const std::filesystem::path& filePath)
+	{
+		m_pFile = CreateFileW(filePath.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (m_pFile == nullptr)
+			throw(FileWalkerException(L"Failed to open file: " + filePath.wstring()));
+
+		m_pFileMap = CreateFileMappingW(m_pFile, NULL, PAGE_READONLY, 0, 0, NULL);
+		if (m_pFileMap == nullptr)
+		{
+			CloseHandle(m_pFile);
+			throw(FileWalkerException(L"Failed to create file mapping for: " + filePath.wstring()));
+		}
+
+		m_pMapView = MapViewOfFile(m_pFileMap, FILE_MAP_READ, 0, 0, 0);
+		if (m_pMapView == nullptr)
+		{
+			CloseHandle(m_pFileMap);
+			CloseHandle(m_pFile);
+			throw(FileWalkerException(L"Failed to create map view of file: " + filePath.wstring()));
+		}
+
+		m_pData = reinterpret_cast<PBYTE>(m_pMapView);
+	}
+
+#else
+	void openLinux(const std::filesystem::path& filePath)
+	{
+		m_fd = ::open(filePath.string().c_str(), O_RDONLY);
+		if (m_fd == -1)
+			throw FileWalkerException("Failed to open file: " + filePath.string());
+
+		m_pMapView = ::mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, m_fd, 0);
+
+		if (m_pMapView == MAP_FAILED)
+		{
+			::close(m_fd);
+			throw FileWalkerException("Failed to mmap file: " + filePath.string());
+		}
+
+		m_pData = reinterpret_cast<unsigned char*>(m_pMapView);
+	}
+#endif
+
 	void close()
+	{
+#ifdef _WIN32
+		closeWin();
+#else
+		closeLinux();
+#endif
+
+		m_offset = 0;
+	}
+
+#ifdef _WIN32
+	void closeWin()
 	{
 		if (m_pMapView != nullptr)
 		{
@@ -312,9 +362,19 @@ private:
 			CloseHandle(m_pFile);
 			m_pFile = nullptr;
 		}
-
-		m_offset = 0;
 	}
+#else
+	void closeLinux()
+	{
+		if (m_pMapView)
+			::munmap(m_pMapView, m_size);
+		if (m_fd != -1)
+			::close(m_fd);
+
+		m_fd = -1;
+		m_pMapView = nullptr;
+	}
+#endif
 
 	template<typename T>
 	T read()
@@ -331,10 +391,16 @@ private:
 	}
 
 private:
-	bool m_init       = false;
+	bool m_init = false;
+
+#ifdef _WIN32
 	HANDLE m_pFile    = nullptr;
-	LPVOID m_pMapView = nullptr;
 	HANDLE m_pFileMap = nullptr;
+#else
+	int m_fd = -1;
+#endif
+
+	LPVOID m_pMapView = nullptr;
 
 	PBYTE m_pData = nullptr;
 
