@@ -203,7 +203,7 @@ private:
 			if (pp.extension() == ".project" && pp.filename() != "SysDataBaseBasic.project")
 			{
 				std::filesystem::path projectFile = pp;
-				std::filesystem::path datFile = pp;
+				std::filesystem::path datFile     = pp;
 				datFile.replace_extension(".dat");
 				m_databases.push_back(Database(projectFile, datFile));
 			}

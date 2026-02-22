@@ -179,7 +179,7 @@ inline s512Hash process(const s512Input input, const uint64_t &nBuffer)
 	return result;
 }
 
-inline s512DynSalt calcDynSalt(const std::vector<uint8_t>& data)
+inline s512DynSalt calcDynSalt(const std::vector<uint8_t> &data)
 {
 	if (data.size() <= 0x10)
 		throw std::runtime_error("Invalid data size");

@@ -118,7 +118,7 @@ protected:
 
 		m_fileSize = coder.ReadInt();
 
-		m_unknownSize = coder.ReadInt();
+		m_unknownSize     = coder.ReadInt();
 		m_unknownWordSize = coder.ReadInt();
 		m_unknownWordData = coder.Read(m_unknownWordSize * 2);
 		m_intOffset1      = coder.ReadInt();
@@ -172,7 +172,6 @@ protected:
 		// Update the internal offsets to match the changes in filesize
 		coder.WriteInt(m_intOffset1 + sizeDiff);
 		coder.WriteInt(m_intOffset2 + sizeDiff);
-
 
 		coder.Write(m_unknown2);
 	}
@@ -237,11 +236,11 @@ private:
 
 		size += sizeof(m_fileSize);
 
-		size += 4; // unknown size value
-		size += 4; // size of unknown word data
+		size += 4;                        // unknown size value
+		size += 4;                        // size of unknown word data
 		size += m_unknownWordData.size(); // unknown word data
-		size += 4; // internal offset 1
-		size += 4; // internal offset 2
+		size += 4;                        // internal offset 1
+		size += 4;                        // internal offset 2
 
 		size += m_unknown2.size();
 

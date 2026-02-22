@@ -35,7 +35,6 @@
 #include <string>
 #include <vector>
 
-
 inline uint32_t xorshift32(const uint32_t &seed = 0)
 {
 	static uint32_t state = 0;
@@ -93,10 +92,10 @@ inline void keyExpansion(uint8_t *pRoundKey, const uint8_t *pKey)
 	{
 		uint32_t k = (i - 1) * 4;
 
-		tempa[0]   = pRoundKey[k + 0];
-		tempa[1]   = pRoundKey[k + 1];
-		tempa[2]   = pRoundKey[k + 2];
-		tempa[3]   = pRoundKey[k + 3];
+		tempa[0] = pRoundKey[k + 0];
+		tempa[1] = pRoundKey[k + 1];
+		tempa[2] = pRoundKey[k + 2];
+		tempa[3] = pRoundKey[k + 3];
 
 		if ((i % Nk) == 0)
 		{
@@ -115,7 +114,7 @@ inline void keyExpansion(uint8_t *pRoundKey, const uint8_t *pKey)
 
 		const uint32_t j = i * 4;
 
-		k          = (i - Nk) * 4;
+		k = (i - Nk) * 4;
 
 		pRoundKey[j + 0] = pRoundKey[k + 0] ^ tempa[0];
 		pRoundKey[j + 1] = pRoundKey[k + 1] ^ tempa[1];

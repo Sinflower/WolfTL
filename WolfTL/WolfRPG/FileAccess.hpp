@@ -371,7 +371,7 @@ private:
 		if (m_fd != -1)
 			::close(m_fd);
 
-		m_fd = -1;
+		m_fd       = -1;
 		m_pMapView = nullptr;
 	}
 #endif
