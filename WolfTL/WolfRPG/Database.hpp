@@ -671,8 +671,8 @@ private:
 	Types m_types       = {};
 	Bytes m_cryptHeader = {};
 
-	BYTE m_version = 0;
-	bool m_valid   = false;
+	uint8_t m_version = 0;
+	bool m_valid      = false;
 	std::filesystem::path m_projectFilePath;
 	std::filesystem::path m_datFilePath;
 

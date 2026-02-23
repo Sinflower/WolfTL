@@ -432,8 +432,8 @@ private:
 
 	CommonEvent::CommonEvents m_events = {};
 
-	BYTE m_version    = 0;
-	BYTE m_terminator = 0;
+	uint8_t m_version    = 0;
+	uint8_t m_terminator = 0;
 
 	bool m_v35 = false;
 
