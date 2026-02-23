@@ -24,8 +24,10 @@
  *
  */
 
+#ifdef _WIN32
 #include <Windows.h>
 #include <tchar.h>
+#endif
 
 #include <filesystem>
 #include <format>
@@ -49,6 +51,7 @@ TODO:
  - Rewrite error messages to use std::format
 */
 
+#ifdef _WIN32
 // From: https://stackoverflow.com/a/45588456
 class MBuf : public std::stringbuf
 {
@@ -69,6 +72,12 @@ void EnableUTF8Print()
 	setvbuf(stdout, nullptr, _IONBF, 0);
 	std::cout.rdbuf(&g_buf);
 }
+#else
+void EnableUTF8Print()
+{
+	// No special handling needed for UTF-8 output on non-Windows platforms
+}
+#endif
 
 class WolfTL
 {
@@ -275,7 +284,9 @@ int main(int argc, char* argv[])
 	std::string oldMode = "";
 	bool useOldArgs     = false;
 
+#ifdef _WIN32
 	// Deprecated argument parsing for backward compatibility, will be removed in a future version
+	// Only available on Windows
 	if (argc >= 4)
 	{
 		oldMode = argv[3];
@@ -312,6 +323,7 @@ int main(int argc, char* argv[])
 			}
 		}
 	}
+#endif
 
 	if (!useOldArgs)
 	{

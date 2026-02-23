@@ -29,7 +29,10 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 // Check MSVC
 #if _WIN32 || _WIN64
@@ -47,6 +50,13 @@
 #else
 #define BIT_32
 #endif
+#endif
+
+// Define the TEXT macro and the TCHAR alias if not on Windows
+#ifndef _WIN32
+#define __TEXT(quote) L##quote
+#define TEXT(quote)   __TEXT(quote)
+using TCHAR = wchar_t;
 #endif
 
 using Bytes    = std::vector<uint8_t>;

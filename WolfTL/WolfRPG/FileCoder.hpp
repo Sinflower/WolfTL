@@ -40,6 +40,10 @@
 #include <lz4/lz4.h>
 #include <string>
 
+#ifndef _WIN32
+#include <iconv.h>
+#endif
+
 // TODO:
 // - Create Wrapper class for reader / writer to have mode independent access object
 // - Remove static headers
@@ -469,12 +473,13 @@ private:
 			byte ^= static_cast<uint8_t>(rand());
 	}
 
+#ifdef _WIN32
 	static tString sjis2utf8(const Bytes& sjis)
 	{
 		const char* pSJIS = reinterpret_cast<const char*>(sjis.data());
 		int sjisSize      = MultiByteToWideChar(932, 0, pSJIS, -1, NULL, 0);
 
-		WCHAR* pUTF8 = new WCHAR[sjisSize + 1]();
+		wchar_t* pUTF8 = new wchar_t[sjisSize + 1]();
 		MultiByteToWideChar(932, 0, pSJIS, -1, pUTF8, sjisSize);
 		tString utf8(pUTF8);
 		delete[] pUTF8;
@@ -486,11 +491,84 @@ private:
 		// Empty strings are length 1 with terminating 0
 		if (utf8.empty()) return Bytes(1, 0);
 
-		int utf8Size = WideCharToMultiByte(932, 0, &utf8[0], (int)utf8.size(), NULL, 0, NULL, NULL);
+		int utf8Size = WideCharToMultiByte(932, 0, &utf8[0], static_cast<int32_t>(utf8.size()), NULL, 0, NULL, NULL);
 		Bytes sjis(utf8Size + 1, 0);
-		WideCharToMultiByte(932, 0, &utf8[0], (int)utf8.size(), reinterpret_cast<const LPSTR>(sjis.data()), utf8Size, NULL, NULL);
+		WideCharToMultiByte(932, 0, &utf8[0], static_cast<int32_t>(utf8.size()), reinterpret_cast<char*>(sjis.data()), utf8Size, NULL, NULL);
 		return sjis;
 	}
+#else
+	static tString sjis2utf8(const Bytes& sjis)
+	{
+		iconv_t cd = iconv_open("UTF-8", "SHIFT-JIS");
+		if (cd == (iconv_t)-1)
+			throw WolfRPGException("iconv_open failed");
+
+		// Allocate output buffer (UTF-8 can be up to 4 bytes per character)
+		std::size_t inBytesLeft  = sjis.size();
+		std::size_t outBytesLeft = inBytesLeft * 4;
+		std::vector<char> output(outBytesLeft);
+
+		char* pInBuf  = const_cast<char*>(reinterpret_cast<const char*>(sjis.data()));
+		char* pOutBuf = output.data();
+
+		size_t result = iconv(cd, &pInBuf, &inBytesLeft, &pOutBuf, &outBytesLeft);
+		if (result == (std::size_t)-1)
+		{
+			iconv_close(cd);
+			throw WolfRPGException("iconv conversion failed");
+		}
+
+		std::string converted(output.data(), output.size() - outBytesLeft);
+		std::wstring r = ToUTF16(converted);
+
+		iconv_close(cd);
+		return r;
+	}
+
+	static Bytes utf82sjis(const tString& utf8)
+	{
+		iconv_t cd = iconv_open("SHIFT-JIS", "UTF-8");
+		if (cd == (iconv_t)-1)
+			throw WolfRPGException("iconv_open failed");
+
+		std::string u = ToUTF8(utf8);
+
+		std::size_t inBytesLeft  = u.size();
+		std::size_t outBytesLeft = inBytesLeft * 2; // SJIS max ~2 bytes per char
+		std::vector<char> output(outBytesLeft);
+
+		char* pInBuf  = const_cast<char*>(u.data());
+		char* pOutBuf = output.data();
+
+		while (inBytesLeft > 0)
+		{
+			std::size_t result = iconv(cd, &pInBuf, &inBytesLeft, &pOutBuf, &outBytesLeft);
+
+			if (result == (std::size_t)-1)
+			{
+				if (errno == E2BIG)
+				{
+					// Enlarge buffer and retry
+					std::size_t used = output.size() - outBytesLeft;
+					output.resize(output.size() * 2);
+					pOutBuf       = output.data() + used;
+					outBytesLeft = output.size() - used;
+				}
+				else
+				{
+					iconv_close(cd);
+					throw WolfRPGException("iconv conversion failed");
+				}
+			}
+		}
+
+		Bytes converted;
+		converted.assign(output.data(), output.data() + (output.size() - outBytesLeft));
+
+		iconv_close(cd);
+		return converted;
+	}
+#endif
 
 	void decryptV3_3()
 	{
