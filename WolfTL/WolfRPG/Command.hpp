@@ -449,7 +449,7 @@ protected:
 	uint8_t m_indent;
 	Bytes m_v35Unknown;
 
-	static const uint8_t TERMINATOR = 0x0;
+	static constexpr uint8_t TERMINATOR = 0x0;
 };
 
 bool Command::s_v35 = false;
