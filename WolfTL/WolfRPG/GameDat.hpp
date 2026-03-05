@@ -189,6 +189,11 @@ protected:
 			j["TitleMsg"]   = ToUTF8(m_titleMsg);
 		}
 
+		j["MainFont"] = ToUTF8(m_font);
+		j["SubFonts"] = nlohmann::ordered_json::array();
+		for (const tString& font : m_subFonts)
+			j["SubFonts"].push_back(ToUTF8(font));
+
 		return j;
 	}
 
@@ -202,6 +207,11 @@ protected:
 			m_startUpMsg = ToUTF16(j["StartUpMsg"]);
 			m_titleMsg   = ToUTF16(j["TitleMsg"]);
 		}
+
+		m_font = ToUTF16(j["MainFont"]);
+		m_subFonts.clear();
+		for (const auto& subFont : j["SubFonts"])
+			m_subFonts.push_back(ToUTF16(subFont));
 	}
 
 private:
