@@ -367,6 +367,7 @@ int main(int argc, char* argv[])
 		std::wcerr << std::endl
 				   << "Error while processing: " << g_activeFile << std::endl
 				   << e.what() << std::endl;
+		return 1;
 	}
 
 	return 0;
