@@ -461,7 +461,11 @@ private:
 
 	void cryptDatV2(Bytes& data)
 	{
-		CryptData cd = decryptV2File(data);
+		std::array<uint32_t, 3> seedIndices = { 0, 3, 9 }; // Default seed indices for everything except GameDat
+		if (m_seedIndices.size() >= 3)
+			seedIndices = { m_seedIndices[0], m_seedIndices[1], m_seedIndices[2] };
+
+		CryptData cd = decryptV2File(data, seedIndices);
 		data.assign(cd.gameDatBytes.begin(), cd.gameDatBytes.end());
 	}
 
@@ -551,7 +555,7 @@ private:
 					// Enlarge buffer and retry
 					std::size_t used = output.size() - outBytesLeft;
 					output.resize(output.size() * 2);
-					pOutBuf       = output.data() + used;
+					pOutBuf      = output.data() + used;
 					outBytesLeft = output.size() - used;
 				}
 				else
@@ -569,6 +573,57 @@ private:
 		return converted;
 	}
 #endif
+
+	void decryptV3_2()
+	{
+		uint8_t indicator = ReadByte();
+
+		if (m_fileType == WolfFileType::DataBase)
+		{
+			if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
+				return;
+		}
+		else
+		{
+			if (indicator == 0x0)
+				return;
+		}
+
+		Bytes header(CRYPT_HEADER_SIZE);
+		header[0] = indicator;
+
+		for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
+			header[i] = ReadByte();
+
+		Bytes seeds;
+		for (size_t i = 0; i < m_seedIndices.size(); i++)
+			seeds.push_back(header[m_seedIndices[i]]);
+
+		m_cryptHeader = header;
+
+		Bytes data = Read();
+		cryptDatV1(data, seeds);
+
+		m_reader.InitData(data);
+
+		// Skip 5 bytes to get to the key size
+		m_reader.Skip(5);
+		uint32_t keySize = m_reader.ReadUInt32();
+
+		if (m_fileType == WolfFileType::GameDat)
+		{
+			// Skip over the key it since it's not needed here
+			m_reader.Skip(keySize);
+			return;
+		}
+
+		int8_t projKey = m_reader.ReadInt8();
+
+		if (s_projKey == -1)
+			s_projKey = projKey;
+
+		m_reader.Skip(keySize - 1);
+	}
 
 	void decryptV3_3()
 	{
@@ -613,7 +668,13 @@ private:
 
 		if (m_reader.At(1) == 0x50)
 		{
-			if (m_reader.At(5) < 0x57)
+			uint8_t cryptVersion = m_reader.At(5);
+			if (cryptVersion < 0x55)
+			{
+				decryptV3_2();
+				return;
+			}
+			else if (cryptVersion < 0x57)
 			{
 				decryptV3_3();
 				return;
@@ -629,57 +690,18 @@ private:
 			// The first 25 bytes are the header -- TODO: remove magic numbers (here and elsewhere)
 			m_reader.Seek(25);
 			Unpack();
+			return;
 		}
-		else
+
+		if (m_fileType == WolfFileType::DataBase)
 		{
-			uint8_t indicator = ReadByte();
-
-			if (m_fileType == WolfFileType::DataBase)
+			if (m_reader.At(10) == 0xC4)
 			{
-				if (m_reader.At(10) == 0xC4)
-				{
-					m_reader.Seek(11);
-					Unpack();
-					m_reader.Seek(1);
-					return;
-				}
-
-				if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
-					return;
+				m_reader.Seek(11);
+				Unpack();
+				m_reader.Seek(1);
+				return;
 			}
-			else
-			{
-				if (indicator == 0x0)
-					return;
-			}
-
-			Bytes header(CRYPT_HEADER_SIZE);
-			header[0] = indicator;
-
-			for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
-				header[i] = ReadByte();
-
-			Bytes seeds;
-			for (size_t i = 0; i < m_seedIndices.size(); i++)
-				seeds.push_back(header[m_seedIndices[i]]);
-
-			m_cryptHeader = header;
-
-			Bytes data = Read();
-			cryptDatV1(data, seeds);
-
-			m_reader.InitData(data);
-
-			if (m_fileType == WolfFileType::GameDat) return;
-
-			m_reader.Skip(5);
-			uint32_t keySize = m_reader.ReadUInt32();
-			int8_t projKey   = m_reader.ReadInt8();
-
-			if (s_projKey == -1)
-				s_projKey = projKey;
-
-			m_reader.Skip(keySize - 1);
 		}
 	}
 

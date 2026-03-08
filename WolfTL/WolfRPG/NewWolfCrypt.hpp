@@ -537,7 +537,7 @@ inline void decrpytProV2P1(std::vector<uint8_t> &data, const uint32_t &seed)
 		data[i] ^= rnds[i % NUM_RNDS];
 }
 
-inline void initCryptProt(CryptData &cd)
+inline void initCryptProt(CryptData &cd, const std::array<uint32_t, 3> &seedIndices)
 {
 	uint32_t fileSize = static_cast<uint32_t>(cd.gameDatBytes.size());
 
@@ -546,7 +546,7 @@ inline void initCryptProt(CryptData &cd)
 	else
 		cd.dataSize = 326;
 
-	decrpytProV2P1(cd.gameDatBytes, genMTSeed({ cd.gameDatBytes[0], cd.gameDatBytes[3], cd.gameDatBytes[9] }));
+	decrpytProV2P1(cd.gameDatBytes, genMTSeed({ cd.gameDatBytes[seedIndices[0]], cd.gameDatBytes[seedIndices[1]], cd.gameDatBytes[seedIndices[2]] }));
 
 	std::copy(cd.gameDatBytes.begin() + 0xB, cd.gameDatBytes.begin() + 0xF, cd.keyBytes.begin());
 
@@ -559,13 +559,13 @@ inline void initCryptProt(CryptData &cd)
 	cd.seed2 = cd.keyBytes[1] ^ cd.keyBytes[2];
 }
 
-inline CryptData decryptV2File(const std::vector<uint8_t> &bytes)
+inline CryptData decryptV2File(const std::vector<uint8_t> &bytes, const std::array<uint32_t, 3> &seedIndices)
 {
 	CryptData cd;
 	RngData rd;
 
 	cd.gameDatBytes = bytes;
-	initCryptProt(cd);
+	initCryptProt(cd, seedIndices);
 
 	runCrypt(rd, cd.seed1, cd.seed2);
 
