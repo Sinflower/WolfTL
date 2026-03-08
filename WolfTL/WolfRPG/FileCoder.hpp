@@ -27,12 +27,12 @@
 #pragma once
 
 #include "FileAccess.hpp"
-#include "NewWolfCrypt.hpp"
 #include "Types.hpp"
 #include "WolfRPGException.hpp"
 #include "WolfRPGUtils.hpp"
 
-#include "../Wolf35Unprotect.hpp"
+#include "../WolfCrypt/NewWolfCrypt.hpp"
+#include "../WolfCrypt/Wolf35Unprotect.hpp"
 
 #include <array>
 #include <filesystem>

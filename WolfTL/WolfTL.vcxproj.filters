@@ -25,6 +25,9 @@
     <Filter Include="Header Files\WolfRPG">
       <UniqueIdentifier>{eb67ee65-10df-4bdd-9521-ef45cbcb5c6b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\WolfCrypt">
+      <UniqueIdentifier>{d406a81f-4642-4a40-81ff-c88a15117821}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WolfTL.cpp">
@@ -74,26 +77,29 @@
     <ClInclude Include="WolfRPG\WolfDataBase.hpp">
       <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
-    <ClInclude Include="WolfRPG\NewWolfCrypt.hpp">
-      <Filter>Header Files\WolfRPG</Filter>
-    </ClInclude>
     <ClInclude Include="3rdParty\nlohmann\json.hpp">
       <Filter>3rdParty\nlohmann</Filter>
     </ClInclude>
     <ClInclude Include="3rdParty\lz4\lz4.h">
       <Filter>3rdParty\lz4</Filter>
     </ClInclude>
-    <ClInclude Include="Wolf35Unprotect.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="WolfSha512.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="WolfRPG\StringConv.hpp">
       <Filter>Header Files\WolfRPG</Filter>
+    </ClInclude>
+    <ClInclude Include="WolfCrypt\NewWolfCrypt.hpp">
+      <Filter>Header Files\WolfCrypt</Filter>
+    </ClInclude>
+    <ClInclude Include="WolfCrypt\Wolf35Unprotect.hpp">
+      <Filter>Header Files\WolfCrypt</Filter>
+    </ClInclude>
+    <ClInclude Include="WolfCrypt\WolfSha512.hpp">
+      <Filter>Header Files\WolfCrypt</Filter>
+    </ClInclude>
+    <ClInclude Include="WolfCrypt\WolfAes.hpp">
+      <Filter>Header Files\WolfCrypt</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
