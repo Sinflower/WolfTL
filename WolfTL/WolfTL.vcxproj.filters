@@ -89,7 +89,7 @@
     <ClInclude Include="WolfRPG\StringConv.hpp">
       <Filter>Header Files\WolfRPG</Filter>
     </ClInclude>
-    <ClInclude Include="WolfCrypt\NewWolfCrypt.hpp">
+    <ClInclude Include="WolfCrypt\WolfCrypt.hpp">
       <Filter>Header Files\WolfCrypt</Filter>
     </ClInclude>
     <ClInclude Include="WolfCrypt\Wolf35Unprotect.hpp">

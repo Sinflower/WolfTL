@@ -31,7 +31,7 @@
 #include "WolfRPGException.hpp"
 #include "WolfRPGUtils.hpp"
 
-#include "../WolfCrypt/NewWolfCrypt.hpp"
+#include "../WolfCrypt/WolfCrypt.hpp"
 #include "../WolfCrypt/Wolf35Unprotect.hpp"
 
 #include <array>
@@ -465,7 +465,7 @@ private:
 		if (m_seedIndices.size() >= 3)
 			seedIndices = { m_seedIndices[0], m_seedIndices[1], m_seedIndices[2] };
 
-		CryptData cd = decryptV2File(data, seedIndices);
+		wolf::crypt::CryptData cd = wolf::crypt::decryptV2File(data, seedIndices);
 		data.assign(cd.gameDatBytes.begin(), cd.gameDatBytes.end());
 	}
 

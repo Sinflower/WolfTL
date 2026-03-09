@@ -146,7 +146,7 @@
     <ClInclude Include="3rdParty\lz4\lz4.h" />
     <ClInclude Include="3rdParty\nlohmann\json.hpp" />
     <ClInclude Include="resource.h" />
-    <ClInclude Include="WolfCrypt\NewWolfCrypt.hpp" />
+    <ClInclude Include="WolfCrypt\WolfCrypt.hpp" />
     <ClInclude Include="WolfCrypt\Wolf35Unprotect.hpp" />
     <ClInclude Include="WolfCrypt\WolfAes.hpp" />
     <ClInclude Include="WolfCrypt\WolfSha512.hpp" />

@@ -1,5 +1,5 @@
 /*
- *  File: NewWolfCrypt.hpp
+ *  File: WolfCrypt.hpp
  *  Copyright (c) 2024 Sinflower
  *
  *  MIT License
@@ -35,6 +35,9 @@
 #include <vector>
 
 #include "WolfAes.hpp"
+
+namespace wolf::crypt
+{
 
 inline uint32_t xorshift32(const uint32_t &seed = 0)
 {
@@ -396,3 +399,5 @@ inline CryptData decryptV2File(const std::vector<uint8_t> &bytes, const std::arr
 
 	return cd;
 }
+
+} // namespace wolf::crypt

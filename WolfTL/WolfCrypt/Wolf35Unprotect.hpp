@@ -32,7 +32,7 @@
 #include <map>
 #include <vector>
 
-#include "NewWolfCrypt.hpp"
+#include "WolfCrypt.hpp"
 #include "WolfSha512.hpp"
 
 #include "../WolfRPG/Types.hpp"
@@ -80,7 +80,7 @@ static const std::map<WolfFileType, ProMagic> PRO_MAGIC = {
 inline void decryptProV3P1(std::vector<uint8_t> &data, const std::array<uint8_t, 3> seedIdx)
 {
 	const uint32_t seed = (0xB << 24) | (data[seedIdx[0]] << 16) | (data[seedIdx[1]] << 8) | data[seedIdx[2]];
-	int32_t rn          = xorshift32(seed);
+	int32_t rn          = wolf::crypt::xorshift32(seed);
 
 	for (uint32_t i = 0xA; i < data.size(); i++)
 	{
