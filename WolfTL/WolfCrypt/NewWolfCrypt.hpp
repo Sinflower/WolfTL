@@ -72,7 +72,7 @@ struct RngData
 	uint32_t seed2   = 0;
 	uint32_t counter = 0;
 
-	std::vector<std::vector<uint32_t>> data = std::vector<std::vector<uint32_t>>(OUTER_VEC_LEN, std::vector<uint32_t>(INNER_VEC_LEN, 0));
+	std::array<std::array<uint32_t, INNER_VEC_LEN>, OUTER_VEC_LEN> data;
 
 	void Reset()
 	{
@@ -80,7 +80,8 @@ struct RngData
 		seed2   = 0;
 		counter = 0;
 
-		data = std::vector<std::vector<uint32_t>>(OUTER_VEC_LEN, std::vector<uint32_t>(INNER_VEC_LEN, 0));
+		for (auto &outer : data)
+			std::fill(outer.begin(), outer.end(), 0);
 	}
 };
 
@@ -89,8 +90,10 @@ inline uint32_t customRng1(RngData &rd)
 	uint32_t state;
 	uint32_t stateMod;
 
-	const uint32_t seedP1 = (rd.seed1 ^ (((rd.seed1 << 11) ^ rd.seed1) >> 8));
-	const uint32_t seed   = (rd.seed1 << 11) ^ seedP1;
+	const uint32_t seed1 = rd.seed1;
+
+	const uint32_t seedP1 = (seed1 ^ (((seed1 << 11) ^ seed1) >> 8));
+	const uint32_t seed   = (seed1 << 11) ^ seedP1;
 
 	state = 1664525 * seed + 1013904223;
 
@@ -156,9 +159,9 @@ inline uint32_t customRng2(RngData &rd)
 inline uint32_t customRng3(RngData &rd)
 {
 	uint32_t state;
-	uint32_t seed = rd.seed2;
+	const uint32_t seed = rd.seed2;
 
-	state = (1566083941 * rd.seed2) ^ (292331520 * rd.seed2);
+	state = (1566083941 * seed) ^ (292331520 * seed);
 	state ^= (state >> 17) ^ (32 * (state ^ (state >> 17)));
 	state = 69069 * (state ^ (state ^ (state >> 11)) & 0x3FFFFFFF);
 
@@ -177,7 +180,7 @@ inline uint32_t customRng3(RngData &rd)
 	return state;
 }
 
-inline void rngChain(RngData &rd, std::vector<uint32_t> &data)
+inline void rngChain(RngData &rd, std::array<uint32_t, RngData::INNER_VEC_LEN> &data)
 {
 	uint32_t i = 0;
 	for (uint32_t &d : data)
@@ -189,31 +192,33 @@ inline void rngChain(RngData &rd, std::vector<uint32_t> &data)
 		if ((++rd.counter & 1) == 0)
 			d += customRng3(rd);
 
-		if (!(rd.counter % 3))
+		const uint32_t c = rd.counter;
+
+		if (!(c % 3))
 			d ^= customRng1(rd) + 3;
 
-		if (!(rd.counter % 7))
+		if (!(c % 7))
 			d += customRng3(rd) + 1;
 
-		if ((rd.counter & 7) == 0)
+		if ((c & 7) == 0)
 			d *= customRng1(rd);
 
 		if (!((i + rd.seed1) % 5))
 			d ^= customRng1(rd);
 
-		if (!(rd.counter % 9))
+		if (!(c % 9))
 			d += customRng2(rd) + 4;
 
-		if (!(rd.counter % 0x18))
+		if (!(c % 0x18))
 			d += customRng2(rd) + 7;
 
-		if (!(rd.counter % 0x1F))
+		if (!(c % 0x1F))
 			d += 3 * customRng3(rd);
 
-		if (!(rd.counter % 0x3D))
+		if (!(c % 0x3D))
 			d += customRng3(rd) + 1;
 
-		if (!(rd.counter % 0xA1))
+		if (!(c % 0xA1))
 			d += customRng2(rd);
 
 		if (static_cast<uint16_t>(rn) == 256)
@@ -235,7 +240,7 @@ inline void runCrypt(RngData &rd, const uint32_t &seed1, const uint32_t &seed2)
 		rngChain(rd, rd.data[i]);
 }
 
-inline void aLotOfRngStuff(RngData &rd, uint32_t a2, uint32_t a3, const uint32_t &idx, std::vector<uint8_t> &cryptData)
+inline void aLotOfRngStuff(RngData &rd, uint32_t a2, uint32_t a3, const uint32_t &idx, std::array<uint8_t, RngData::DATA_VEC_LEN> &cryptData)
 {
 	uint32_t itrs = 20;
 
@@ -288,15 +293,15 @@ inline void aesKeyGen(CryptData &cd, RngData &rd, wolf::aes::AesKey &aesKey, wol
 {
 	runCrypt(rd, cd.seedBytes[0], cd.seedBytes[1]);
 
-	std::vector<uint8_t> cryptData(RngData::DATA_VEC_LEN, 0);
+	std::array<uint8_t, RngData::DATA_VEC_LEN> cryptData{};
 
 	for (uint32_t i = 0; i < RngData::DATA_VEC_LEN; i++)
 		aLotOfRngStuff(rd, i + cd.seedBytes[3], cd.seedBytes[2] - i, i, cryptData);
 
 	uint8_t seed = cd.seedBytes[1] ^ cd.seedBytes[2];
 
-	std::vector<uint8_t> indexes(RngData::DATA_VEC_LEN, 0);
-	std::vector<uint8_t> resData(RngData::DATA_VEC_LEN, 0);
+	std::array<uint8_t, RngData::DATA_VEC_LEN> indexes{};
+	std::array<uint8_t, RngData::DATA_VEC_LEN> resData{};
 	std::iota(indexes.begin(), indexes.end(), 0);
 
 	srand(seed);
@@ -315,7 +320,7 @@ inline void aesKeyGen(CryptData &cd, RngData &rd, wolf::aes::AesKey &aesKey, wol
 
 	const auto ivBegin = resData.begin() + wolf::aes::KEY_SIZE;
 
-	std::copy(resData.begin(), resData.begin() + wolf::aes::KEY_SIZE, aesKey.begin());
+	std::copy(resData.begin(), ivBegin, aesKey.begin());
 	std::copy(ivBegin, ivBegin + wolf::aes::IV_SIZE, aesIv.begin());
 }
 
@@ -348,10 +353,7 @@ inline void initCryptProt(CryptData &cd, const std::array<uint32_t, 3> &seedIndi
 {
 	uint32_t fileSize = static_cast<uint32_t>(cd.gameDatBytes.size());
 
-	if (fileSize - 20 < 326)
-		cd.dataSize = fileSize - 20;
-	else
-		cd.dataSize = 326;
+	cd.dataSize = std::min<uint32_t>(fileSize - 20, 326);
 
 	decrpytProV2P1(cd.gameDatBytes, genMTSeed({ cd.gameDatBytes[seedIndices[0]], cd.gameDatBytes[seedIndices[1]], cd.gameDatBytes[seedIndices[2]] }));
 
@@ -362,8 +364,10 @@ inline void initCryptProt(CryptData &cd, const std::array<uint32_t, 3> &seedIndi
 	cd.seedBytes[2] = cd.keyBytes[3] ^ cd.gameDatBytes[7];
 	cd.seedBytes[3] = cd.keyBytes[2] + cd.gameDatBytes[7] - cd.keyBytes[0];
 
-	cd.seed1 = cd.keyBytes[1] ^ cd.keyBytes[2];
-	cd.seed2 = cd.keyBytes[1] ^ cd.keyBytes[2];
+	const uint32_t seed = cd.keyBytes[1] ^ cd.keyBytes[2];
+
+	cd.seed1 = seed;
+	cd.seed2 = seed;
 }
 
 inline CryptData decryptV2File(const std::vector<uint8_t> &bytes, const std::array<uint32_t, 3> &seedIndices)
