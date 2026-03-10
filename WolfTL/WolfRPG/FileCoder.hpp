@@ -31,8 +31,8 @@
 #include "WolfRPGException.hpp"
 #include "WolfRPGUtils.hpp"
 
-#include "../WolfCrypt/WolfCrypt.hpp"
 #include "../WolfCrypt/Wolf35Unprotect.hpp"
+#include "../WolfCrypt/WolfCrypt.hpp"
 
 #include <array>
 #include <filesystem>

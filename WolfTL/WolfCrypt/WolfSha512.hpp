@@ -222,12 +222,12 @@ inline s512DynSalt calcDynSalt(const std::vector<uint8_t> &data)
 		throw std::runtime_error("Invalid data size");
 
 	const uint8_t d0 = data[7];
-	const uint8_t d1 = data[0xB];
-	const uint8_t d2 = data[0xD];
+	const uint8_t d1 = data[11];
+	const uint8_t d2 = data[13];
 
 	uint8_t r0 = (d0 + 2 * d1) % 0xF6;
-	uint8_t r1 = d2 ^ data[0xE];
-	uint8_t r2 = d0 ^ data[0xC];
+	uint8_t r1 = d2 ^ data[14];
+	uint8_t r2 = d0 ^ data[12];
 	uint8_t r3 = d0 + d2 - d1;
 
 	s512DynSalt res = { r0, r1, r2, r3 };

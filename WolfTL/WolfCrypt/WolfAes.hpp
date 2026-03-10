@@ -30,7 +30,6 @@
 #include <bit>
 #include <cstdint>
 
-
 namespace wolf::aes
 {
 inline constexpr uint8_t sbox[256] = {
@@ -47,9 +46,9 @@ inline constexpr uint32_t Nb = 4;
 inline constexpr uint32_t Nr = 10;
 
 inline constexpr uint32_t KEY_EXP_SIZE = 176;
-inline constexpr uint32_t KEY_SIZE = 16;
-inline constexpr uint32_t IV_SIZE = 16;
-inline constexpr uint32_t BLOCKLEN = 16;
+inline constexpr uint32_t KEY_SIZE     = 16;
+inline constexpr uint32_t IV_SIZE      = 16;
+inline constexpr uint32_t BLOCKLEN     = 16;
 
 inline constexpr uint32_t ROUND_KEY_SIZE = KEY_EXP_SIZE + IV_SIZE;
 
