@@ -96,13 +96,15 @@ public:
 	{
 	}
 
+	bool Valid() const
+	{
+		return m_wolf.Valid();
+	}
+
 	void ToJson() const
 	{
 		if (!m_wolf.Valid())
-		{
-			std::cerr << ERROR_TAG << "WolfRPG initialization failed" << std::endl;
-			return;
-		}
+			throw std::runtime_error(std::format("{}WolfRPG initialization failed", ERROR_TAG));
 
 		maps2Json();
 		databases2Json();
@@ -116,17 +118,11 @@ public:
 		wolfRPGUtils::g_skipBackup = !inplace;
 
 		if (!m_wolf.Valid())
-		{
-			std::cerr << ERROR_TAG << "WolfRPG initialization failed" << std::endl;
-			return;
-		}
+			throw std::runtime_error("WolfRPG initialization failed");
 
 		// Check if the patch folder exists
 		if (!fs::exists(m_outputPath))
-		{
-			std::cerr << ERROR_TAG << "Patch folder does not exist" << std::endl;
-			return;
-		}
+			throw std::runtime_error(std::format("{}Patch folder does not exist: {}", ERROR_TAG, m_outputPath.string()));
 
 		patchMaps(m_outputPath);
 		patchDatabases(m_outputPath);
@@ -203,10 +199,7 @@ private:
 
 		// Check if the patch folder exists
 		if (!fs::exists(mapPatch))
-		{
-			std::cerr << ERROR_TAG << "Map patch folder does not exist" << std::endl;
-			return;
-		}
+			throw std::runtime_error(std::format("{}Map patch folder does not exist: {}", ERROR_TAG, mapPatch.string()));
 
 		for (Map& map : m_wolf.GetMaps())
 			map.Patch(mapPatch);
@@ -222,10 +215,7 @@ private:
 
 		// Check if the patch folder exists
 		if (!fs::exists(dbPatch))
-		{
-			std::cerr << ERROR_TAG << "Database patch folder does not exist" << std::endl;
-			return;
-		}
+			throw std::runtime_error(std::format("{}Database patch folder does not exist: {}", ERROR_TAG, dbPatch.string()));
 
 		for (Database& db : m_wolf.GetDatabases())
 			db.Patch(dbPatch);
@@ -241,10 +231,7 @@ private:
 
 		// Check if the patch folder exists
 		if (!fs::exists(comPatch))
-		{
-			std::cerr << ERROR_TAG << "Common event patch folder does not exist" << std::endl;
-			return;
-		}
+			throw std::runtime_error(std::format("{}Common event patch folder does not exist: {}", ERROR_TAG, comPatch.string()));
 
 		m_wolf.GetCommonEvents().Patch(comPatch);
 
@@ -354,6 +341,12 @@ int main(int argc, char* argv[])
 	try
 	{
 		WolfTL wolf(dataPath, outputPath, skipGameDat, saveUncompressed);
+
+		if (!wolf.Valid())
+		{
+			std::wcerr << L"Failed to initialize WolfRPG object, aborting" << std::endl;
+			return 1;
+		}
 
 		if (bCreate)
 			wolf.ToJson();
