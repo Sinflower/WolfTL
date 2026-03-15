@@ -574,20 +574,10 @@ private:
 	}
 #endif
 
-	void decryptV3_2()
+	void decryptV2_0(const uint8_t& indicator)
 	{
-		uint8_t indicator = ReadByte();
-
-		if (m_fileType == WolfFileType::DataBase)
-		{
-			if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
-				return;
-		}
-		else
-		{
-			if (indicator == 0x0)
-				return;
-		}
+		if (indicator == 0x0)
+			return;
 
 		Bytes header(CRYPT_HEADER_SIZE);
 		header[0] = indicator;
@@ -605,6 +595,19 @@ private:
 		cryptDatV1(data, seeds);
 
 		m_reader.InitData(data);
+	}
+
+	void decryptV3_1()
+	{
+		uint8_t indicator = ReadByte();
+
+		if (m_fileType == WolfFileType::DataBase)
+		{
+			if (m_reader.At(1) != 0x50 || m_reader.At(5) != 0x54 || m_reader.At(7) != 0x4B)
+				return;
+		}
+
+		decryptV2_0(indicator);
 
 		// Skip 5 bytes to get to the key size
 		m_reader.Skip(5);
@@ -671,7 +674,7 @@ private:
 			uint8_t cryptVersion = m_reader.At(5);
 			if (cryptVersion < 0x55)
 			{
-				decryptV3_2();
+				decryptV3_1();
 				return;
 			}
 			else if (cryptVersion < 0x57)
@@ -691,6 +694,13 @@ private:
 			m_reader.Seek(25);
 			Unpack();
 			return;
+		}
+		else
+		{
+			uint8_t indicator = ReadByte();
+
+			if (indicator != 0x0 && m_fileType != WolfFileType::DataBase)
+				decryptV2_0(indicator);
 		}
 
 		if (m_fileType == WolfFileType::DataBase)
