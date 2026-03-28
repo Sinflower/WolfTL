@@ -644,9 +644,8 @@ private:
 	{
 		g_activeFile = ::GetFileName(m_datFilePath);
 		FileCoder coder(m_datFilePath, FileCoder::Mode::READ, WolfFileType::DataBase, DAT_SEED_INDICES);
-		if (coder.IsEncrypted())
-			m_cryptHeader = coder.GetCryptHeader();
-		else
+
+		if (!coder.WasEncrypted())
 			VERIFY_MAGIC(coder, DAT_MAGIC_NUMBER)
 
 		m_version = coder.ReadByte();

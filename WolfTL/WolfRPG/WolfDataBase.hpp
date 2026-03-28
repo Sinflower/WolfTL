@@ -61,12 +61,7 @@ public:
 
 		FileCoder coder(m_filePath, FileCoder::Mode::READ, m_fileType, m_seedIndices);
 
-		if (coder.IsEncrypted())
-		{
-			m_cryptHeader = coder.GetCryptHeader();
-			coder.SetUTF8(m_magic.IsUTF8(m_cryptHeader));
-		}
-		else
+		if (!coder.WasEncrypted())
 			VERIFY_MAGIC(coder, m_magic);
 
 		if (m_saveUncompressed)
@@ -82,12 +77,7 @@ public:
 
 		FileCoder coder(buffer, FileCoder::Mode::READ, m_fileType, m_seedIndices);
 
-		if (coder.IsEncrypted())
-		{
-			m_cryptHeader = coder.GetCryptHeader();
-			coder.SetUTF8(m_magic.IsUTF8(m_cryptHeader));
-		}
-		else
+		if (!coder.WasEncrypted())
 			VERIFY_MAGIC(coder, m_magic);
 
 		return load(coder);
@@ -184,8 +174,6 @@ protected:
 	bool m_saveUncompressed;
 	WolfFileType m_fileType;
 	SeedIncides m_seedIndices = {};
-
-	Bytes m_cryptHeader = {};
 
 private:
 	static inline std::filesystem::path s_uncompressedPath = "";

@@ -103,9 +103,9 @@ private:
 
 class FileCoder
 {
-	static constexpr std::size_t CRYPT_HEADER_SIZE = 10;
-
 public:
+	static constexpr uint32_t CRYPT_HEADER_SIZE = 10;
+
 	enum class Mode
 	{
 		READ,
@@ -116,8 +116,7 @@ public:
 	// Disable Copy/Move constructor
 	DISABLE_COPY_MOVE(FileCoder)
 
-	FileCoder(const std::filesystem::path& filePath, const Mode& mode, const WolfFileType& fileType, const SeedIncides& seedIndices = {}, const Bytes& cryptHeader = {}) :
-		m_cryptHeader(cryptHeader),
+	FileCoder(const std::filesystem::path& filePath, const Mode& mode, const WolfFileType& fileType, const SeedIncides& seedIndices = {}) :
 		m_mode(mode),
 		m_seedIndices(seedIndices),
 		m_fileType(fileType)
@@ -134,18 +133,12 @@ public:
 
 			m_writer.Open(filePath);
 
-			if (!cryptHeader.empty())
-				Write(cryptHeader);
-			else
-			{
-				if (fileType != WolfFileType::Project && fileType != WolfFileType::Map)
-					WriteByte(0);
-			}
+			if (fileType != WolfFileType::Project && fileType != WolfFileType::Map)
+				WriteByte(0);
 		}
 	}
 
-	FileCoder(const Bytes& buffer, const Mode& mode, const WolfFileType& fileType, const SeedIncides& seedIndices = {}, const Bytes& cryptHeader = {}) :
-		m_cryptHeader(cryptHeader),
+	FileCoder(const Bytes& buffer, const Mode& mode, const WolfFileType& fileType, const SeedIncides& seedIndices = {}) :
 		m_mode(mode),
 		m_seedIndices(seedIndices),
 		m_fileType(fileType)
@@ -216,14 +209,9 @@ public:
 		return m_reader.GetSize();
 	}
 
-	const Bytes& GetCryptHeader() const
+	bool WasEncrypted() const
 	{
-		return m_cryptHeader;
-	}
-
-	bool IsEncrypted() const
-	{
-		return !m_cryptHeader.empty();
+		return m_wasEncrypted;
 	}
 
 	void Seek(const int32_t& pos)
@@ -571,14 +559,14 @@ private:
 		Bytes header(CRYPT_HEADER_SIZE);
 		header[0] = indicator;
 
-		for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
+		for (uint32_t i = 1; i < CRYPT_HEADER_SIZE; i++)
 			header[i] = ReadByte();
 
 		SeedIncides seeds = { 0, 0, 0 };
 		for (size_t i = 0; i < m_seedIndices.size(); i++)
 			seeds[i] = header[m_seedIndices[i]];
 
-		m_cryptHeader = header;
+		m_wasEncrypted = true;
 
 		Bytes data = Read();
 		cryptDatV1(data, seeds);
@@ -597,6 +585,9 @@ private:
 		}
 
 		decryptV2_0(indicator);
+
+		m_wasEncrypted = true;
+		s_isUTF8       = true;
 
 		// Skip 5 bytes to get to the key size
 		m_reader.Skip(5);
@@ -622,12 +613,13 @@ private:
 		Bytes data = Read();
 		cryptDatV2(data);
 
-		m_cryptHeader = Bytes(data.begin(), data.begin() + 143);
+		m_wasEncrypted = true;
+		s_isUTF8       = true;
 
 		m_reader.InitData(data);
 		m_reader.Skip(143);
 
-		s_projKey = m_cryptHeader[0x14];
+		s_projKey = data[0x14];
 	}
 
 	void decryptV3_5()
@@ -636,6 +628,9 @@ private:
 		Bytes data = Read();
 		if (!wolf::crypt::datadecrypt::v3_5::decryptData(data, m_fileType))
 			throw WolfRPGException(ERROR_TAG + "Failed to decrypt ProV3 data.");
+
+		// wasEncrypted is not set here because the decryption function adds the required headers
+		s_isUTF8 = true;
 
 		m_reader.InitData(data);
 		// ¯\_(ツ)_/¯
@@ -705,7 +700,7 @@ private:
 	}
 
 private:
-	Bytes m_cryptHeader = {};
+	bool m_wasEncrypted = false;
 	Mode m_mode;
 	SeedIncides m_seedIndices = {};
 	WolfFileType m_fileType;
