@@ -146,9 +146,15 @@
     <ClInclude Include="3rdParty\lz4\lz4.h" />
     <ClInclude Include="3rdParty\nlohmann\json.hpp" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="WolfCrypt\WolfChaCha20.hpp" />
     <ClInclude Include="WolfCrypt\WolfCrypt.hpp" />
-    <ClInclude Include="WolfCrypt\Wolf35Unprotect.hpp" />
     <ClInclude Include="WolfCrypt\WolfAes.hpp" />
+    <ClInclude Include="WolfCrypt\WolfCryptTypes.hpp" />
+    <ClInclude Include="WolfCrypt\WolfCryptUtils.hpp" />
+    <ClInclude Include="WolfCrypt\WolfDataDecrypt.hpp" />
+    <ClInclude Include="WolfCrypt\WolfDxArcKey.hpp" />
+    <ClInclude Include="WolfCrypt\WolfProtKey.hpp" />
+    <ClInclude Include="WolfCrypt\WolfRng.hpp" />
     <ClInclude Include="WolfCrypt\WolfSha512.hpp" />
     <ClInclude Include="WolfRPG\Command.hpp" />
     <ClInclude Include="WolfRPG\CommonEvents.hpp" />
