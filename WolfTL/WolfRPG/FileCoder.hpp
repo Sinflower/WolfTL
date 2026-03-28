@@ -103,7 +103,7 @@ private:
 
 class FileCoder
 {
-	static constexpr std::size_t CRYPT_HEADER_SIZE   = 10;
+	static constexpr std::size_t CRYPT_HEADER_SIZE = 10;
 
 public:
 	enum class Mode
@@ -490,52 +490,52 @@ private:
 #else
 	static tString sjis2utf8(const Bytes& sjis)
 	{
-		iconv_t cd = iconv_open("UTF-8", "SHIFT-JIS");
+		iconv_t cd = iconv_open("WCHAR_T", "SHIFT-JIS");
 		if (cd == (iconv_t)-1)
 			throw WolfRPGException("iconv_open failed");
 
-		// Allocate output buffer (UTF-8 can be up to 4 bytes per character)
 		std::size_t inBytesLeft  = sjis.size();
-		std::size_t outBytesLeft = inBytesLeft * 4;
-		std::vector<char> output(outBytesLeft);
+		std::size_t outBytesLeft = inBytesLeft * sizeof(wchar_t);
+
+		std::wstring output(outBytesLeft / sizeof(wchar_t), L'\0');
 
 		char* pInBuf  = const_cast<char*>(reinterpret_cast<const char*>(sjis.data()));
-		char* pOutBuf = output.data();
+		char* pOutBuf = reinterpret_cast<char*>(output.data());
 
 		size_t result = iconv(cd, &pInBuf, &inBytesLeft, &pOutBuf, &outBytesLeft);
-		if (result == (std::size_t)-1)
+		if (result == static_cast<std::size_t>(-1))
 		{
 			iconv_close(cd);
 			throw WolfRPGException("iconv conversion failed");
 		}
 
-		std::string converted(output.data(), output.size() - outBytesLeft);
-		std::wstring r = ToUTF16(converted);
+		// Resize to actual number of wchar_t elements present
+		size_t bytesWritten = output.size() * sizeof(wchar_t) - outBytesLeft;
+		output.resize(bytesWritten / sizeof(wchar_t));
+		output.pop_back(); // Remove null terminator added by iconv
 
 		iconv_close(cd);
-		return r;
+		return output;
 	}
 
 	static Bytes utf82sjis(const tString& utf8)
 	{
-		iconv_t cd = iconv_open("SHIFT-JIS", "UTF-8");
+		iconv_t cd = iconv_open("SHIFT-JIS", "WCHAR_T");
 		if (cd == (iconv_t)-1)
 			throw WolfRPGException("iconv_open failed");
 
-		std::string u = ToUTF8(utf8);
+		std::size_t inBytesLeft  = utf8.size() * sizeof(wchar_t);
+		std::size_t outBytesLeft = inBytesLeft * 4; // worst case size
+		std::vector<char> output(outBytesLeft, 0);
 
-		std::size_t inBytesLeft  = u.size();
-		std::size_t outBytesLeft = inBytesLeft * 2; // SJIS max ~2 bytes per char
-		std::vector<char> output(outBytesLeft);
-
-		char* pInBuf  = const_cast<char*>(u.data());
+		char* pInBuf  = reinterpret_cast<char*>(const_cast<wchar_t*>(utf8.data()));
 		char* pOutBuf = output.data();
 
 		while (inBytesLeft > 0)
 		{
 			std::size_t result = iconv(cd, &pInBuf, &inBytesLeft, &pOutBuf, &outBytesLeft);
 
-			if (result == (std::size_t)-1)
+			if (result == static_cast<std::size_t>(-1))
 			{
 				if (errno == E2BIG)
 				{
@@ -553,8 +553,10 @@ private:
 			}
 		}
 
-		Bytes converted;
-		converted.assign(output.data(), output.data() + (output.size() - outBytesLeft));
+		Bytes converted(output.data(), output.data() + (output.size() - outBytesLeft));
+
+		// Add null terminator
+		converted.push_back(0x0);
 
 		iconv_close(cd);
 		return converted;
