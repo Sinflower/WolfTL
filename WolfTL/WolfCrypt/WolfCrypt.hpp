@@ -140,18 +140,18 @@ inline void initWolfCrypt(const uint16_t &cryptVersion, const uint8_t *pPW, uint
 	}
 
 	const uint32_t seed = s0 * s1 + s2 + s3;
-	srand(seed);
+	rng::msvc_srand(seed);
 
-	fac[s3 % 3] = rand() % 256;
+	fac[s3 % 3] = rng::msvc_rand() % 256;
 
 	if (!other && utils::isV35(cryptVersion))
-		fac[1] = rand() % 0xFB; // This might need to be a += not sure
+		fac[1] = rng::msvc_rand() % 0xFB; // This might need to be a += not sure
 
 	for (uint32_t i = 0; i < 256; i++)
 	{
-		int16_t rn = rand() & 0xFFFF;
+		int16_t rn = rng::msvc_rand() & 0xFFFF;
 
-		pKey[i]       = fac[0] ^ (rand() & 0xFF);
+		pKey[i]       = fac[0] ^ (rng::msvc_rand() & 0xFF);
 		pKey[i + 256] = fac[1] ^ (rn >> 8);
 		pKey[i + 512] = fac[2] ^ rn;
 	}
@@ -160,7 +160,7 @@ inline void initWolfCrypt(const uint16_t &cryptVersion, const uint8_t *pPW, uint
 	{
 		for (uint32_t j = 0; j < 128; j++)
 		{
-			int16_t rn = rand() & 0xFFFF;
+			int16_t rn = rng::msvc_rand() & 0xFFFF;
 
 			pKey[j] ^= s3 ^ pKey2[2] ^ (rn >> 8);
 			pKey[j + 256] ^= s3 ^ pKey2[0] ^ rn;
@@ -274,23 +274,23 @@ inline void cryptAddresses(uint8_t *pData, const uint8_t *pKey, const uint32_t c
 	{
 		uint32_t seed = 0xC + (pKey[9] & 0xFF) * (pKey[10] & 0xFF) + (pKey[3] & 0xFF);
 
-		srand(seed);
+		rng::msvc_srand(seed);
 
 		pDataB16 += 4;
 
 		for (int32_t i = 0; i < 2; i++)
 		{
 			for (int32_t j = 3; j >= 0; j--)
-				pDataB16[j] ^= rand() & 0xFFFF;
+				pDataB16[j] ^= rng::msvc_rand() & 0xFFFF;
 
 			pDataB16 += 4;
 		}
 
 		uint32_t *pDataB32 = reinterpret_cast<uint32_t *>(pDataB16);
 
-		uint64_t r0 = static_cast<uint64_t>(rand()) << 17;
-		uint64_t r1 = static_cast<uint64_t>(rand()) << 31;
-		uint32_t v0 = (r0 & 0xFFFFFFFF) | (r1 & 0xFFFFFFFF) | rand();
+		uint64_t r0 = static_cast<uint64_t>(rng::msvc_rand()) << 17;
+		uint64_t r1 = static_cast<uint64_t>(rng::msvc_rand()) << 31;
+		uint32_t v0 = (r0 & 0xFFFFFFFF) | (r1 & 0xFFFFFFFF) | rng::msvc_rand();
 		uint32_t v1 = (r0 >> 32) | (r1 >> 32);
 
 		pDataB32[0] ^= v0;
@@ -299,20 +299,20 @@ inline void cryptAddresses(uint8_t *pData, const uint8_t *pKey, const uint32_t c
 		pDataB16 += 4;
 
 		for (int32_t i = 3; i >= 0; i--)
-			pDataB16[i] ^= rand() & 0xFFFF;
+			pDataB16[i] ^= rng::msvc_rand() & 0xFFFF;
 	}
 	else
 	{
 		uint16_t *pDataB16 = reinterpret_cast<uint16_t *>(pData);
 
-		srand((pKey[0] & 0xFF) + (pKey[7] & 0xFF) * (pKey[12] & 0xFF));
+		rng::msvc_srand((pKey[0] & 0xFF) + (pKey[7] & 0xFF) * (pKey[12] & 0xFF));
 
 		pDataB16 += 4;
 
 		for (int32_t i = 0; i < 4; i++)
 		{
 			for (int32_t j = 3; j >= 0; j--)
-				pDataB16[j] ^= rand() & 0xFFFF;
+				pDataB16[j] ^= rng::msvc_rand() & 0xFFFF;
 
 			pDataB16 += 4;
 		}
@@ -334,11 +334,11 @@ inline void aesKeyGen(CryptData &cd, rng::RngData &rd, aes::AesKey &aesKey, aes:
 	std::array<uint8_t, rng::RngData::DATA_VEC_LEN> resData{};
 	std::iota(indexes.begin(), indexes.end(), 0);
 
-	srand(seed);
+	rng::msvc_srand(seed);
 
 	for (uint32_t i = 0; i < rng::RngData::DATA_VEC_LEN; i++)
 	{
-		uint32_t rn = rand();
+		uint32_t rn = rng::msvc_rand();
 		uint8_t old = indexes[i];
 		indexes[i]  = indexes[rn % rng::RngData::DATA_VEC_LEN];
 

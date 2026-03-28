@@ -31,6 +31,30 @@
 
 namespace wolf::crypt::rng
 {
+#ifdef _WIN32
+inline void msvc_srand(unsigned int seed)
+{
+	srand(seed);
+}
+
+inline int msvc_rand(void)
+{
+	return rand();
+}
+#else
+static unsigned long s_winRngSeed = 1;
+
+inline void msvc_srand(unsigned int seed)
+{
+	s_winRngSeed = seed;
+}
+
+inline int msvc_rand(void)
+{
+	s_winRngSeed = s_winRngSeed * 214013 + 2531011;
+	return (s_winRngSeed >> 16) & 0x7FFF;
+}
+#endif
 
 struct RngData
 {
@@ -253,7 +277,7 @@ inline void runRngChain(rng::RngData &rd, const uint32_t &seed1, const uint32_t 
 	rd.seed2   = seed2;
 	rd.counter = 0;
 
-	srand(seed1);
+	msvc_srand(seed1);
 
 	for (uint32_t i = 0; i < rd.data.size(); i++)
 		rng::rngChain(rd, rd.data[i]);

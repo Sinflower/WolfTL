@@ -49,10 +49,10 @@ inline void decryptData(std::vector<uint8_t> &data, const SeedIncides &seeds)
 	static constexpr std::size_t DECRYPT_INTERVALS[] = { 1, 2, 5 };
 	for (std::size_t i = 0; i < seeds.size(); i++)
 	{
-		srand(seeds[i]);
+		rng::msvc_srand(seeds[i]);
 
 		for (std::size_t j = 0; j < data.size(); j += DECRYPT_INTERVALS[i])
-			data[j] ^= static_cast<uint8_t>(rand() >> 12);
+			data[j] ^= static_cast<uint8_t>(rng::msvc_rand() >> 12);
 	}
 }
 } // namespace v2_0
@@ -187,12 +187,12 @@ inline bool decryptData(std::vector<uint8_t> &buffer, const WolfFileType &datTyp
 
 	decryptProV3P1(buffer, seedIdx);
 
-	srand(buffer[12]);
+	rng::msvc_srand(buffer[12]);
 	std::size_t aesSize = buffer.size() - AES_DATA_OFFSET;
 	// ¯\_(ツ)_/¯ that's what to code says (probably) and it works ¯\_(ツ)_/¯
-	if (aesSize >= rand() % 126 + 200)
+	if (aesSize >= rng::msvc_rand() % 126 + 200)
 	{
-		std::size_t newSize = rand() % 126 + 200;
+		std::size_t newSize = rng::msvc_rand() % 126 + 200;
 
 		if (aesSize > newSize)
 			aesSize = newSize;

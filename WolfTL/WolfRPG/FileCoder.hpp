@@ -458,10 +458,10 @@ private:
 
 	void cryptProj(Bytes& data)
 	{
-		srand(s_projKey);
+		wolf::crypt::rng::msvc_srand(s_projKey);
 
 		for (uint8_t& byte : data)
-			byte ^= static_cast<uint8_t>(rand());
+			byte ^= static_cast<uint8_t>(wolf::crypt::rng::msvc_rand());
 	}
 
 #ifdef _WIN32
