@@ -86,7 +86,7 @@ protected:
 		m_magicString = coder.ReadString();
 
 		if (m_magicString != MAGIC_STRING)
-			throw WolfRPGException(ERROR_TAGW + L"Invalid magic string: \"" + m_magicString + L"\" expected: \"" + MAGIC_STRING + L"\"");
+			throw WolfRPGException(std::format(L"{}Invalid magic string: \"{}\" expected: \"{}\"", ERROR_TAGW, m_magicString, MAGIC_STRING));
 
 		// String 2
 		m_decryptKey = coder.ReadByteArray();
