@@ -282,7 +282,7 @@ private:
 
 	uint32_t m_oldSize = 0;
 
-	inline static const uInts SEED_INDICES{ 0, 8, 6 };
+	inline static const SeedIncides SEED_INDICES = { 0, 8, 6 };
 	inline static const MagicNumber MAGIC_NUMBER{ { 0x57, 0x00, 0x00, 0x4f, 0x4c, 0x00, 0x46, 0x4d, 0x00 }, 8 };
 	inline static const tString MAGIC_STRING = L"0000-0000";
 };

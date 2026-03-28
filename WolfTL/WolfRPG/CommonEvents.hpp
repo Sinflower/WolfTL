@@ -437,6 +437,6 @@ private:
 
 	bool m_v35 = false;
 
-	inline static const uInts SEED_INDICES{ 0, 3, 9 };
+	inline static const SeedIncides SEED_INDICES = { 0, 3, 9 };
 	inline static const MagicNumber MAGIC_NUMBER = { { 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x43, 0x00 }, 5 };
 };

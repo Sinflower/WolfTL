@@ -117,7 +117,7 @@ public:
 	// Disable Copy/Move constructor
 	DISABLE_COPY_MOVE(FileCoder)
 
-	FileCoder(const std::filesystem::path& filePath, const Mode& mode, const WolfFileType& fileType, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
+	FileCoder(const std::filesystem::path& filePath, const Mode& mode, const WolfFileType& fileType, const SeedIncides& seedIndices = {}, const Bytes& cryptHeader = {}) :
 		m_cryptHeader(cryptHeader),
 		m_mode(mode),
 		m_seedIndices(seedIndices),
@@ -135,19 +135,17 @@ public:
 
 			m_writer.Open(filePath);
 
-			if (!m_seedIndices.empty() && !cryptHeader.empty())
-			{
+			if (!cryptHeader.empty())
 				Write(cryptHeader);
-			}
 			else
 			{
-				if (!m_seedIndices.empty())
+				if (fileType != WolfFileType::Project && fileType != WolfFileType::Map)
 					WriteByte(0);
 			}
 		}
 	}
 
-	FileCoder(const Bytes& buffer, const Mode& mode, const WolfFileType& fileType, const uInts& seedIndices = uInts(), const Bytes& cryptHeader = Bytes()) :
+	FileCoder(const Bytes& buffer, const Mode& mode, const WolfFileType& fileType, const SeedIncides& seedIndices = {}, const Bytes& cryptHeader = {}) :
 		m_cryptHeader(cryptHeader),
 		m_mode(mode),
 		m_seedIndices(seedIndices),
@@ -448,7 +446,7 @@ public:
 	}
 
 private:
-	void cryptDatV1(Bytes& data, const Bytes& seeds)
+	void cryptDatV1(Bytes& data, const SeedIncides& seeds)
 	{
 		for (std::size_t i = 0; i < seeds.size(); i++)
 		{
@@ -585,9 +583,9 @@ private:
 		for (int i = 1; i < CRYPT_HEADER_SIZE; i++)
 			header[i] = ReadByte();
 
-		Bytes seeds;
+		SeedIncides seeds = { 0, 0, 0 };
 		for (size_t i = 0; i < m_seedIndices.size(); i++)
-			seeds.push_back(header[m_seedIndices[i]]);
+			seeds[i] = header[m_seedIndices[i]];
 
 		m_cryptHeader = header;
 
@@ -718,17 +716,13 @@ private:
 private:
 	Bytes m_cryptHeader = {};
 	Mode m_mode;
-	uInts m_seedIndices = {};
+	SeedIncides m_seedIndices = {};
 	WolfFileType m_fileType;
 
 	FileReader m_reader = {};
 	FileWriter m_writer = {};
 
-	static bool s_isUTF8;
-	static uint32_t s_projKey;
-	static bool s_createBackup;
+	inline static bool s_isUTF8       = false;
+	inline static uint32_t s_projKey  = -1;
+	inline static bool s_createBackup = false;
 };
-
-bool FileCoder::s_isUTF8       = false;
-uint32_t FileCoder::s_projKey  = -1;
-bool FileCoder::s_createBackup = false;

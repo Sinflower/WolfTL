@@ -65,6 +65,8 @@ using tString  = std::wstring;
 using tStrings = std::vector<tString>;
 using Paths    = std::vector<std::filesystem::path>;
 
+using SeedIncides = std::array<uint8_t, 3>;
+
 #define DISABLE_COPY_MOVE(T)             \
 	T(T const &)               = delete; \
 	void operator=(T const &t) = delete; \

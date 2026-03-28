@@ -686,7 +686,7 @@ private:
 	std::filesystem::path m_projectFilePath;
 	std::filesystem::path m_datFilePath;
 
-	inline static const uInts DAT_SEED_INDICES{ 0, 3, 9 };
+	inline static const SeedIncides DAT_SEED_INDICES = { 0, 3, 9 };
 	inline static const MagicNumber DAT_MAGIC_NUMBER{ { 0x57, 0x00, 0x00, 0x4F, 0x4C, 0x00, 0x46, 0x4D, 0x00 }, 5 };
 };
 

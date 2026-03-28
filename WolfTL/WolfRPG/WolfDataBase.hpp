@@ -36,7 +36,7 @@
 class WolfDataBase
 {
 public:
-	WolfDataBase(const std::filesystem::path& filePath, const MagicNumber& magic, const WolfFileType& fileType, const bool& saveUncompressed = false, const uInts& seedIndices = {}) :
+	WolfDataBase(const std::filesystem::path& filePath, const MagicNumber& magic, const WolfFileType& fileType, const bool& saveUncompressed = false, const SeedIncides& seedIndices = {}) :
 		m_filePath(filePath),
 		m_magic(magic),
 		m_fileType(fileType),
@@ -104,7 +104,7 @@ public:
 
 		// Get the relative path of the dataPath (absolute path to the data folder) and the parent path of the file, i.e., the difference between the two paths.
 		// This results in the subfolder structure which are required to produce the correct output path.
-		std::filesystem::path relativePath = std::filesystem::relative(std::filesystem::absolute(m_filePath).parent_path(), dataPath);
+		std::filesystem::path relativePath = std::filesystem::relative(std::filesystem::absolute(m_filePath).parent_path(), std::filesystem::absolute(dataPath));
 		std::filesystem::path fullOutPath  = outputPath / relativePath / fileName;
 
 		// Make sure the target folder exists
@@ -183,7 +183,7 @@ protected:
 	MagicNumber m_magic;
 	bool m_saveUncompressed;
 	WolfFileType m_fileType;
-	uInts m_seedIndices = {};
+	SeedIncides m_seedIndices = {};
 
 	Bytes m_cryptHeader = {};
 

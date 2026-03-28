@@ -440,7 +440,7 @@ public:
 		m_v35Unknown = unknown;
 	}
 
-	static bool s_v35;
+	inline static bool s_v35 = false;
 
 protected:
 	uInts m_args;
@@ -451,8 +451,6 @@ protected:
 
 	static constexpr uint8_t TERMINATOR = 0x0;
 };
-
-bool Command::s_v35 = false;
 
 namespace CommandSpecialClasses
 {
