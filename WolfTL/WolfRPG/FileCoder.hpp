@@ -31,8 +31,8 @@
 #include "WolfRPGException.hpp"
 #include "WolfRPGUtils.hpp"
 
-#include "../WolfCrypt/Wolf35Unprotect.hpp"
 #include "../WolfCrypt/WolfCrypt.hpp"
+#include "../WolfCrypt/WolfDataDecrypt.hpp"
 
 #include <array>
 #include <filesystem>
@@ -104,7 +104,6 @@ private:
 class FileCoder
 {
 	static constexpr std::size_t CRYPT_HEADER_SIZE   = 10;
-	static constexpr std::size_t DECRYPT_INTERVALS[] = { 1, 2, 5 };
 
 public:
 	enum class Mode
@@ -448,22 +447,12 @@ public:
 private:
 	void cryptDatV1(Bytes& data, const SeedIncides& seeds)
 	{
-		for (std::size_t i = 0; i < seeds.size(); i++)
-		{
-			srand(seeds[i]);
-
-			for (std::size_t j = 0; j < data.size(); j += DECRYPT_INTERVALS[i])
-				data[j] ^= static_cast<uint8_t>(rand() >> 12);
-		}
+		wolf::crypt::datadecrypt::v2_0::decryptData(data, seeds);
 	}
 
 	void cryptDatV2(Bytes& data)
 	{
-		std::array<uint32_t, 3> seedIndices = { 0, 3, 9 }; // Default seed indices for everything except GameDat
-		if (m_seedIndices.size() >= 3)
-			seedIndices = { m_seedIndices[0], m_seedIndices[1], m_seedIndices[2] };
-
-		wolf::crypt::CryptData cd = wolf::crypt::decryptV2File(data, seedIndices);
+		wolf::crypt::CryptData cd = wolf::crypt::datadecrypt::v3_3::decryptData(data, m_seedIndices);
 		data.assign(cd.gameDatBytes.begin(), cd.gameDatBytes.end());
 	}
 
@@ -643,7 +632,7 @@ private:
 	{
 		m_reader.Seek(0);
 		Bytes data = Read();
-		if (!wolf::v3_5::unprotect::decryptProV3Dat(data, m_fileType))
+		if (!wolf::crypt::datadecrypt::v3_5::decryptData(data, m_fileType))
 			throw WolfRPGException(ERROR_TAG + "Failed to decrypt ProV3 data.");
 
 		m_reader.InitData(data);

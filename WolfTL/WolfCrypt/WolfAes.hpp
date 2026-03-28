@@ -30,7 +30,9 @@
 #include <bit>
 #include <cstdint>
 
-namespace wolf::aes
+#include "WolfCryptUtils.hpp"
+
+namespace wolf::crypt::aes
 {
 inline constexpr uint8_t sbox[256] = {
 	0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76, 0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0, 0xB7, 0xFD, 0x93, 0x26, 0x36, 0x3F, 0xF7, 0xCC, 0x34, 0xA5, 0xE5, 0xF1, 0x71, 0xD8, 0x31, 0x15, 0x04, 0xC7, 0x23, 0xC3, 0x18, 0x96, 0x05, 0x9A, 0x07, 0x12, 0x80, 0xE2, 0xEB, 0x27, 0xB2, 0x75, 0x09, 0x83, 0x2C, 0x1A, 0x1B, 0x6E, 0x5A, 0xA0, 0x52, 0x3B,
@@ -105,6 +107,69 @@ inline void keyExpansion(uint8_t *pRoundKey, const uint8_t *pKey)
 		pRoundKey[j + 2] = pRoundKey[k + 2] ^ tempa[2];
 		pRoundKey[j + 3] = pRoundKey[k + 3] ^ tempa[3];
 	}
+}
+
+inline void initAES128(uint8_t *pRoundKey, const uint8_t *pPwd, uint8_t *pProKey, const uint16_t &cryptVersion)
+{
+	uint8_t proKeyZero[4] = { 0 };
+	if (pProKey == nullptr)
+		pProKey = proKeyZero;
+
+	uint8_t key[KEY_SIZE] = { 0 };
+	uint8_t iv[IV_SIZE]   = { 0 };
+
+	if (utils::isV35(cryptVersion))
+	{
+		for (uint32_t i = 0; i < PW_SIZE; i++)
+		{
+			const uint8_t &proKeyElem = pProKey[i % 4];
+			uint8_t pwIdxKey          = ((i * (proKeyElem % 5 + 7)) ^ (3 * pPwd[i])) % PW_SIZE;
+			uint8_t pwIdxIv           = (i * ((pProKey[(i + 1) % 4] % 7) + 0xB) ^ (5 * pPwd[(i + 3) % 15])) % PW_SIZE;
+
+			key[i] ^= ((i ^ proKeyElem) + (pPwd[pwIdxKey] << (i % 3))) % 0xFB;
+			iv[i] ^= ((pPwd[pwIdxIv] >> (i % 2)) + ((i * i) ^ pProKey[(i + 2) % 4])) % 0xF6;
+
+			key[PW_SIZE] ^= 7 * (pPwd[i] + ((i + 1) ^ proKeyElem)) % 0xFD;
+			iv[PW_SIZE] ^= 11 * static_cast<uint16_t>((pPwd[i] - ((i * 2) ^ pProKey[(i + 2) % 4]))) % 0x100;
+		}
+	}
+	else if (cryptVersion == 0x3F2)
+	{
+		for (uint32_t i = 0; i < PW_SIZE; i++)
+		{
+			key[i] ^= (pPwd[(i * 7) % 0xF] + pProKey[i & 3]) * i * i;
+			iv[i] ^= (pPwd[(i * 11) % 0xF] + pProKey[(i + 2) % 4]) - i * i;
+
+			key[PW_SIZE] ^= (i * 3) + pPwd[i] + pProKey[i & 3];
+			iv[PW_SIZE] ^= (i * 5) + pPwd[i] + pProKey[(i + 2) % 4];
+		}
+	}
+	else
+	{
+		for (uint32_t i = 0; i < PW_SIZE; i++)
+		{
+			key[i] ^= pPwd[(i * 7) % 0xF] + i * i;
+			iv[i] ^= pPwd[(i * 11) % 0xF] - i * i;
+
+			key[PW_SIZE] ^= pPwd[i] + (i * 3);
+			iv[PW_SIZE] ^= pPwd[i] + (i * 5);
+		}
+	}
+
+	key[0] ^= pProKey[0];
+	iv[10] ^= pProKey[0];
+
+	key[4] ^= pProKey[1];
+	iv[1] ^= pProKey[1];
+
+	key[8] ^= pProKey[2];
+	iv[4] ^= pProKey[2];
+
+	key[12] ^= pProKey[3];
+	iv[7] ^= pProKey[3];
+
+	keyExpansion(pRoundKey, key);
+	std::memcpy(pRoundKey + KEY_EXP_SIZE, iv, IV_SIZE);
 }
 
 /////////////////////////////////
@@ -226,4 +291,4 @@ inline void aesCtrXCrypt(uint8_t *pData, uint8_t *pKey, const std::size_t &size)
 ////// AES CTR Crypt
 /////////////////////////////////
 
-} // namespace wolf::aes
+} // namespace wolf::crypt::aes

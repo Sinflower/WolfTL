@@ -488,6 +488,14 @@ public:
 			m_data[i].Patch(j["data"][i]);
 	}
 
+	void FixPro35Description()
+	{
+		// Remove all Ascii characters < 0x20 from the description
+		m_description.erase(std::remove_if(m_description.begin(), m_description.end(),
+										   [](const wchar_t& c) { return c < 0x20 && c != 0x0A && c != 0x0D; }),
+							m_description.end());
+	}
+
 	const Datas& GetData() const
 	{
 		return m_data;
@@ -613,6 +621,12 @@ public:
 
 		for (std::size_t i = 0; i < m_types.size(); i++)
 			m_types[i].Patch(j["types"][i]);
+	}
+
+	void FixPro35TypeDescriptions()
+	{
+		for (Type& type : m_types)
+			type.FixPro35Description();
 	}
 
 	const Types& GetTypes() const

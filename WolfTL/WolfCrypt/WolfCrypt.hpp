@@ -26,7 +26,6 @@
 
 #pragma once
 
-#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <numeric>
@@ -35,9 +34,72 @@
 #include <vector>
 
 #include "WolfAes.hpp"
+#include "WolfChaCha20.hpp"
+#include "WolfCryptTypes.hpp"
+#include "WolfRng.hpp"
 
 namespace wolf::crypt
 {
+
+inline void wolfCrypt(const uint8_t *pKey, uint8_t *pData, const int64_t &start, const int64_t &end, const bool &updateDataPos, const uint16_t &cryptVersion)
+{
+	if (updateDataPos)
+		pData += start;
+
+	const uint64_t length = end - start;
+
+	uint32_t v1Cnt = start % 256;
+	uint32_t v2Cnt = start / 256 % 256;
+	int32_t v3Cnt  = start / 0x10000 % 256;
+
+	if (utils::isV35(cryptVersion))
+	{
+		uint8_t moddedKey[512];
+		for (uint32_t i = 0; i < 512; i++)
+			moddedKey[i] = pKey[i % 256] ^ (7 * i);
+
+		for (uint64_t i = 0; i < length; i++)
+		{
+			pData[i] ^= moddedKey[v1Cnt++] ^ moddedKey[v2Cnt + 256];
+
+			if (v1Cnt == 256)
+			{
+				v1Cnt = 0;
+				v2Cnt = (v2Cnt + 1) % 256;
+			}
+		}
+	}
+	else
+	{
+		for (uint64_t i = 0; i < length; i++)
+		{
+			pData[i] ^= pKey[v1Cnt++] ^ pKey[v2Cnt + 256] ^ pKey[v3Cnt + 512];
+
+			if (v1Cnt == 256)
+			{
+				v1Cnt = 0;
+				v2Cnt++;
+
+				if (v2Cnt == 256)
+				{
+					v2Cnt = 0;
+					v3Cnt = (v3Cnt + 1) % 256;
+				}
+			}
+		}
+	}
+}
+
+inline void calcSalt(const char *pStr, uint8_t *pSalt)
+{
+	if (!pSalt)
+		return;
+
+	uint32_t len = static_cast<uint32_t>(strlen(pStr));
+
+	for (uint32_t i = 0; i < 128; i++)
+		pSalt[i] = (i / len) + pStr[i % len];
+}
 
 inline uint32_t xorshift32(const uint32_t &seed = 0)
 {
@@ -52,352 +114,244 @@ inline uint32_t xorshift32(const uint32_t &seed = 0)
 	return state;
 }
 
-struct CryptData
+inline void initWolfCrypt(const uint16_t &cryptVersion, const uint8_t *pPW, uint8_t *pKey, uint8_t *pKey2 = nullptr, uint8_t *pData = nullptr, const int64_t &start = -1, const int64_t &end = -1, const bool &other = false, const char *pKeyString = nullptr)
 {
-	std::array<uint8_t, 4> keyBytes  = { 0 };
-	std::array<uint8_t, 4> seedBytes = { 0 };
+	uint8_t fac[3] = { 0 };
 
-	std::vector<uint8_t> gameDatBytes = {};
+	// & 0xFF to prevent sign extension
+	uint8_t s0 = (pPW[2] & 0xFF);
+	uint8_t s1 = (pPW[5] & 0xFF);
+	uint8_t s2 = (pPW[12] & 0xFF);
+	uint8_t s3 = 0;
 
-	uint32_t dataSize = 0;
-
-	uint32_t seed1 = 0;
-	uint32_t seed2 = 0;
-};
-
-struct RngData
-{
-	static constexpr uint32_t OUTER_VEC_LEN = 0x20;
-	static constexpr uint32_t INNER_VEC_LEN = 0x100;
-	static constexpr uint32_t DATA_VEC_LEN  = 0x30;
-
-	uint32_t seed1   = 0;
-	uint32_t seed2   = 0;
-	uint32_t counter = 0;
-
-	std::array<std::array<uint32_t, INNER_VEC_LEN>, OUTER_VEC_LEN> data;
-
-	void Reset()
+	if (!other)
 	{
-		seed1   = 0;
-		seed2   = 0;
-		counter = 0;
+		uint8_t len = (pPW[11] & 0xFF) / 3;
 
-		for (auto &outer : data)
-			std::fill(outer.begin(), outer.end(), 0);
-	}
-};
-
-inline uint32_t customRng1(RngData &rd)
-{
-	uint32_t state;
-	uint32_t stateMod;
-
-	const uint32_t seed1 = rd.seed1;
-
-	const uint32_t seedP1 = (seed1 ^ (((seed1 << 11) ^ seed1) >> 8));
-	const uint32_t seed   = (seed1 << 11) ^ seedP1;
-
-	state = 1664525 * seed + 1013904223;
-
-	if (((13 * seedP1 + 95) & 1) == 0)
-		stateMod = state / 8;
-	else
-		stateMod = state * 4;
-
-	state ^= stateMod;
-
-	if ((state & 0x400) != 0)
-	{
-		state ^= state << 21;
-		stateMod = state >> 9;
+		for (uint8_t i = 0; i < len; i++)
+			s3 = i ^ std::rotr<uint8_t>(s3 ^ (pPW[i % 15] & 0xFF), 3);
 	}
 	else
 	{
-		state ^= state * 4;
-		stateMod = state >> 22;
+		uint8_t len = (pPW[8] & 0xFF) / 4;
+
+		for (uint8_t i = 0; i < len; i++)
+			s3 = i ^ std::rotr<uint8_t>(s3 ^ (pPW[i % 15] & 0xFF), 2);
 	}
 
-	state ^= stateMod;
+	const uint32_t seed = s0 * s1 + s2 + s3;
+	srand(seed);
 
-	if ((state & 0xFFFFF) == 0)
-		state += 256;
+	fac[s3 % 3] = rand() % 256;
 
-	rd.seed1 = state;
-	return state;
-}
+	if (!other && utils::isV35(cryptVersion))
+		fac[1] = rand() % 0xFB; // This might need to be a += not sure
 
-inline uint32_t customRng2(RngData &rd)
-{
-	uint32_t stateMod;
-	uint32_t state;
-
-	uint32_t seed = rd.seed1;
-
-	state    = 1664525 * seed + 1013904223;
-	stateMod = (seed & 7) + 1;
-
-	if (state % 3)
+	for (uint32_t i = 0; i < 256; i++)
 	{
-		if (state % 3 == 1)
-			state ^= (state >> stateMod);
-		else
-			state = ~state + (state << stateMod);
+		int16_t rn = rand() & 0xFFFF;
+
+		pKey[i]       = fac[0] ^ (rand() & 0xFF);
+		pKey[i + 256] = fac[1] ^ (rn >> 8);
+		pKey[i + 512] = fac[2] ^ rn;
 	}
-	else
-		state ^= (state << stateMod);
 
-	if (state)
+	if (pKey2)
 	{
-		if (!static_cast<uint16_t>(state))
-			state ^= 0x55AA55AA;
-	}
-	else
-		state = 0x173BEF;
-
-	rd.seed1 = state;
-	return state;
-}
-
-inline uint32_t customRng3(RngData &rd)
-{
-	uint32_t state;
-	const uint32_t seed = rd.seed2;
-
-	state = (1566083941 * seed) ^ (292331520 * seed);
-	state ^= (state >> 17) ^ (32 * (state ^ (state >> 17)));
-	state = 69069 * (state ^ (state ^ (state >> 11)) & 0x3FFFFFFF);
-
-	if (state)
-	{
-		if (!static_cast<uint16_t>(state))
-			state ^= 0x59A6F141;
-
-		if ((state & 0xFFFFF) == 0)
-			state += 256;
-	}
-	else
-		state = 1566083941;
-
-	rd.seed2 = state;
-	return state;
-}
-
-inline void rngChain(RngData &rd, std::array<uint32_t, RngData::INNER_VEC_LEN> &data)
-{
-	uint32_t i = 0;
-	for (uint32_t &d : data)
-	{
-		uint32_t rn = customRng2(rd);
-
-		d = rn ^ customRng3(rd);
-
-		if ((++rd.counter & 1) == 0)
-			d += customRng3(rd);
-
-		const uint32_t c = rd.counter;
-
-		if (!(c % 3))
-			d ^= customRng1(rd) + 3;
-
-		if (!(c % 7))
-			d += customRng3(rd) + 1;
-
-		if ((c & 7) == 0)
-			d *= customRng1(rd);
-
-		if (!((i + rd.seed1) % 5))
-			d ^= customRng1(rd);
-
-		if (!(c % 9))
-			d += customRng2(rd) + 4;
-
-		if (!(c % 0x18))
-			d += customRng2(rd) + 7;
-
-		if (!(c % 0x1F))
-			d += 3 * customRng3(rd);
-
-		if (!(c % 0x3D))
-			d += customRng3(rd) + 1;
-
-		if (!(c % 0xA1))
-			d += customRng2(rd);
-
-		if (static_cast<uint16_t>(rn) == 256)
-			d += 3 * customRng3(rd);
-
-		i++;
-	}
-}
-
-inline void runCrypt(RngData &rd, const uint32_t &seed1, const uint32_t &seed2)
-{
-	rd.seed1   = seed1;
-	rd.seed2   = seed2;
-	rd.counter = 0;
-
-	srand(seed1);
-
-	for (uint32_t i = 0; i < rd.data.size(); i++)
-		rngChain(rd, rd.data[i]);
-}
-
-inline void aLotOfRngStuff(RngData &rd, uint32_t a2, uint32_t a3, const uint32_t &idx, std::array<uint8_t, RngData::DATA_VEC_LEN> &cryptData)
-{
-	uint32_t itrs = 20;
-
-	for (uint32_t i = 0; i < itrs; i++)
-	{
-		uint32_t idx1 = (a2 ^ customRng1(rd)) & 0x1F;
-		uint32_t idx2 = (a3 ^ customRng2(rd)) & 0xFF;
-		a3            = rd.data[idx1][idx2];
-
-		switch ((a2 + rd.counter) % 0x14u)
+		for (uint32_t j = 0; j < 128; j++)
 		{
-			case 1:
-				rngChain(rd, rd.data[(a2 + 5) & 0x1F]);
-				break;
-			case 2:
-				a3 ^= customRng1(rd);
-				break;
-			case 5:
-				if ((a2 & 0xFFFFF) == 0)
-					cryptData[idx] ^= customRng3(rd);
-				break;
-			case 9:
-			case 0xE:
-				cryptData[customRng2(rd) % 0x30] += a3;
-				break;
-			case 0xB:
-				cryptData[idx] ^= customRng1(rd);
-				break;
-			case 0x11:
-				itrs++;
-				break;
-			case 0x13:
-				if (static_cast<uint16_t>(a2) == 0)
-					cryptData[idx] ^= customRng2(rd);
-				break;
-			default:
-				break;
+			int16_t rn = rand() & 0xFFFF;
+
+			pKey[j] ^= s3 ^ pKey2[2] ^ (rn >> 8);
+			pKey[j + 256] ^= s3 ^ pKey2[0] ^ rn;
+		}
+	}
+
+	if (other)
+	{
+		// --------------------------------------------------------------
+
+		uint8_t salt[128] = { 0 };
+		uint8_t modFactor = 7;
+
+		if (cryptVersion == 0x15E)
+			calcSalt("958", salt);
+		else
+			calcSalt(pKeyString, salt);
+
+		if (utils::isV35(cryptVersion))
+		{
+			s3 += 0x22;
+			modFactor = 16;
 		}
 
-		a2 += customRng3(rd);
+		for (uint32_t i = 0; i < 3; i++)
+		{
+			int32_t t = s3;
 
-		if (itrs > 50)
-			itrs = 50;
+			for (uint32_t j = 0; j < 256; j++)
+			{
+				bool skip = false;
+
+				uint8_t curS  = salt[j & 0x7F];
+				uint8_t curS2 = salt[(j + i) % 0x80];
+				uint8_t curK  = pKey[i * 256 + j];
+				uint8_t sXk   = curS ^ curK;
+
+				uint8_t round = (curS2 | (curS << 8)) % modFactor;
+
+				uint8_t newK = sXk;
+
+				switch (round)
+				{
+					case 1:
+						if ((curS2 % 0xB) == 0)
+							newK = curK;
+						break;
+					case 2:
+						if ((curS % 0x1D) == 0)
+							newK = ~sXk;
+						break;
+					case 3:
+						if (((round + j) % 0x25) == 0)
+							newK = curS2 ^ sXk;
+						break;
+					case 4:
+						if (((curS + curS2) % 97) == 0)
+							newK = curS + sXk;
+						break;
+					case 5:
+						if (((j * round) % 0x7B) == 0)
+							newK = sXk ^ t;
+						break;
+					case 6:
+						if (curS == 0xFF && curS2 == 0)
+						{
+							newK = 0;
+							skip = true;
+						}
+						break;
+					case 7:
+						if (cryptVersion < 0x154 || (cryptVersion > 0x3E8 && cryptVersion < 0x3FC))
+							break;
+
+						if ((((round + j) % 0x33) == 0) || cryptVersion >= 0x3FC)
+							newK ^= curS;
+						break;
+					case 8:
+						if (cryptVersion < 0x154 || (cryptVersion > 0x3E8 && cryptVersion < 0x3FC))
+							break;
+
+						if (((curS % 0x1D) == 0) || cryptVersion >= 0x3FC)
+							newK ^= curS;
+						break;
+					default:
+						break;
+				}
+
+				if (((j + i) % (curS % 5 + 1)) == 0)
+					newK ^= t;
+				else if (skip)
+					newK = ~sXk;
+
+				pKey[i * 256 + j] = newK;
+
+				t += i;
+			}
+		}
+
+		wolfCrypt(pKey, pData, start, end, true, cryptVersion);
 	}
-
-	cryptData[idx] += a3;
 }
 
-inline void aesKeyGen(CryptData &cd, RngData &rd, wolf::aes::AesKey &aesKey, wolf::aes::AesIV &aesIv)
+// --------------------------------------------------------------
+
+inline void cryptAddresses(uint8_t *pData, const uint8_t *pKey, const uint32_t cryptVersion)
 {
-	runCrypt(rd, cd.seedBytes[0], cd.seedBytes[1]);
+	uint16_t *pDataB16 = reinterpret_cast<uint16_t *>(pData);
 
-	std::array<uint8_t, RngData::DATA_VEC_LEN> cryptData{};
+	if (utils::isV35(cryptVersion))
+	{
+		uint32_t seed = 0xC + (pKey[9] & 0xFF) * (pKey[10] & 0xFF) + (pKey[3] & 0xFF);
 
-	for (uint32_t i = 0; i < RngData::DATA_VEC_LEN; i++)
-		aLotOfRngStuff(rd, i + cd.seedBytes[3], cd.seedBytes[2] - i, i, cryptData);
+		srand(seed);
+
+		pDataB16 += 4;
+
+		for (int32_t i = 0; i < 2; i++)
+		{
+			for (int32_t j = 3; j >= 0; j--)
+				pDataB16[j] ^= rand() & 0xFFFF;
+
+			pDataB16 += 4;
+		}
+
+		uint32_t *pDataB32 = reinterpret_cast<uint32_t *>(pDataB16);
+
+		uint64_t r0 = static_cast<uint64_t>(rand()) << 17;
+		uint64_t r1 = static_cast<uint64_t>(rand()) << 31;
+		uint32_t v0 = (r0 & 0xFFFFFFFF) | (r1 & 0xFFFFFFFF) | rand();
+		uint32_t v1 = (r0 >> 32) | (r1 >> 32);
+
+		pDataB32[0] ^= v0;
+		pDataB32[1] ^= v1;
+
+		pDataB16 += 4;
+
+		for (int32_t i = 3; i >= 0; i--)
+			pDataB16[i] ^= rand() & 0xFFFF;
+	}
+	else
+	{
+		uint16_t *pDataB16 = reinterpret_cast<uint16_t *>(pData);
+
+		srand((pKey[0] & 0xFF) + (pKey[7] & 0xFF) * (pKey[12] & 0xFF));
+
+		pDataB16 += 4;
+
+		for (int32_t i = 0; i < 4; i++)
+		{
+			for (int32_t j = 3; j >= 0; j--)
+				pDataB16[j] ^= rand() & 0xFFFF;
+
+			pDataB16 += 4;
+		}
+	}
+}
+
+inline void aesKeyGen(CryptData &cd, rng::RngData &rd, aes::AesKey &aesKey, aes::AesIV &aesIv)
+{
+	rng::runRngChain(rd, cd.seedBytes[0], cd.seedBytes[1]);
+
+	std::array<uint8_t, rng::RngData::DATA_VEC_LEN> cryptData{};
+
+	for (uint32_t i = 0; i < rng::RngData::DATA_VEC_LEN; i++)
+		rng::aLotOfRngStuff(rd, i + cd.seedBytes[3], cd.seedBytes[2] - i, i, cryptData);
 
 	uint8_t seed = cd.seedBytes[1] ^ cd.seedBytes[2];
 
-	std::array<uint8_t, RngData::DATA_VEC_LEN> indexes{};
-	std::array<uint8_t, RngData::DATA_VEC_LEN> resData{};
+	std::array<uint8_t, rng::RngData::DATA_VEC_LEN> indexes{};
+	std::array<uint8_t, rng::RngData::DATA_VEC_LEN> resData{};
 	std::iota(indexes.begin(), indexes.end(), 0);
 
 	srand(seed);
 
-	for (uint32_t i = 0; i < RngData::DATA_VEC_LEN; i++)
+	for (uint32_t i = 0; i < rng::RngData::DATA_VEC_LEN; i++)
 	{
 		uint32_t rn = rand();
 		uint8_t old = indexes[i];
-		indexes[i]  = indexes[rn % RngData::DATA_VEC_LEN];
+		indexes[i]  = indexes[rn % rng::RngData::DATA_VEC_LEN];
 
-		indexes[rn % RngData::DATA_VEC_LEN] = old;
+		indexes[rn % rng::RngData::DATA_VEC_LEN] = old;
 	}
 
-	for (uint32_t i = 0; i < RngData::DATA_VEC_LEN; i++)
+	for (uint32_t i = 0; i < rng::RngData::DATA_VEC_LEN; i++)
 		resData[i] = cryptData[indexes[i]];
 
-	const auto ivBegin = resData.begin() + wolf::aes::KEY_SIZE;
+	const auto ivBegin = resData.begin() + aes::KEY_SIZE;
 
 	std::copy(resData.begin(), ivBegin, aesKey.begin());
-	std::copy(ivBegin, ivBegin + wolf::aes::IV_SIZE, aesIv.begin());
-}
-
-inline uint32_t genMTSeed(const std::array<uint8_t, 3> &seeds)
-{
-	uint32_t x = (seeds[0] << 16) | (seeds[1] << 8) | seeds[2];
-	uint32_t y = (x << 13) ^ x;
-	uint32_t z = (y >> 17) ^ y;
-
-	return z ^ (z << 5);
-}
-
-inline void decrpytProV2P1(std::vector<uint8_t> &data, const uint32_t &seed)
-{
-	const uint32_t NUM_RNDS = 128;
-
-	std::mt19937 gen;
-	gen.seed(seed);
-
-	std::array<uint32_t, NUM_RNDS> rnds;
-
-	for (uint32_t &rnd : rnds)
-		rnd = gen();
-
-	for (uint32_t i = 0xA; i < data.size(); i++)
-		data[i] ^= rnds[i % NUM_RNDS];
-}
-
-inline void initCryptProt(CryptData &cd, const std::array<uint32_t, 3> &seedIndices)
-{
-	uint32_t fileSize = static_cast<uint32_t>(cd.gameDatBytes.size());
-
-	cd.dataSize = std::min<uint32_t>(fileSize - 20, 326);
-
-	decrpytProV2P1(cd.gameDatBytes, genMTSeed({ cd.gameDatBytes[seedIndices[0]], cd.gameDatBytes[seedIndices[1]], cd.gameDatBytes[seedIndices[2]] }));
-
-	std::copy(cd.gameDatBytes.begin() + 0xB, cd.gameDatBytes.begin() + 0xF, cd.keyBytes.begin());
-
-	cd.seedBytes[0] = cd.gameDatBytes[7] + 3 * cd.keyBytes[0];
-	cd.seedBytes[1] = cd.keyBytes[1] ^ cd.keyBytes[2];
-	cd.seedBytes[2] = cd.keyBytes[3] ^ cd.gameDatBytes[7];
-	cd.seedBytes[3] = cd.keyBytes[2] + cd.gameDatBytes[7] - cd.keyBytes[0];
-
-	const uint32_t seed = cd.keyBytes[1] ^ cd.keyBytes[2];
-
-	cd.seed1 = seed;
-	cd.seed2 = seed;
-}
-
-inline CryptData decryptV2File(const std::vector<uint8_t> &bytes, const std::array<uint32_t, 3> &seedIndices)
-{
-	constexpr uint32_t AES_DATA_OFFSET = 20;
-
-	CryptData cd;
-	RngData rd;
-
-	cd.gameDatBytes = bytes;
-	initCryptProt(cd, seedIndices);
-
-	runCrypt(rd, cd.seed1, cd.seed2);
-
-	wolf::aes::AesKey aesKey;
-	wolf::aes::AesIV aesIv;
-
-	aesKeyGen(cd, rd, aesKey, aesIv);
-
-	wolf::aes::AesRoundKey roundKey;
-
-	wolf::aes::keyExpansion(roundKey.data(), aesKey.data());
-	std::copy(aesIv.begin(), aesIv.end(), roundKey.begin() + wolf::aes::KEY_EXP_SIZE);
-
-	wolf::aes::aesCtrXCrypt(cd.gameDatBytes.data() + AES_DATA_OFFSET, roundKey.data(), cd.dataSize);
-
-	return cd;
+	std::copy(ivBegin, ivBegin + aes::IV_SIZE, aesIv.begin());
 }
 
 } // namespace wolf::crypt
