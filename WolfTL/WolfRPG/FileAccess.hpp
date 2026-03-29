@@ -274,6 +274,9 @@ public:
 private:
 	void open(const std::filesystem::path& filePath, const uint32_t& startOffset = 0)
 	{
+		if (!std::filesystem::exists(filePath))
+			throw(FileReaderException(L"File does not exist: " + filePath.wstring()));
+
 		// Load the file size first so it is available during opening, important for Linux mmap
 		m_size = static_cast<uint32_t>(std::filesystem::file_size(filePath));
 

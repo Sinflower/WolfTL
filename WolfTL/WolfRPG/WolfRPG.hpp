@@ -52,11 +52,11 @@ public:
 
 			m_valid = true;
 		}
-		catch (WolfRPGException& e)
+		catch (std::exception& e)
 		{
-			std::wcerr << std::endl
-					   << "Error while processing: " << g_activeFile << std::endl
-					   << e.what() << std::endl;
+			// Add a linebreak to make sure the error message is printed on a new line in case there was some progress output before
+			std::cerr << std::endl;
+			throw WolfRPGException(std::format("Error while processing: {}\n{}", g_activeFile.string(), e.what()));
 		}
 	}
 
