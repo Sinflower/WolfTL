@@ -127,7 +127,7 @@ protected:
 		m_unknown2 = coder.Read();
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAG + "Game.dat has more data than expected");
+			throw WolfRPGException(std::format("{}Game.dat has more data than expected", ERROR_TAG));
 
 		return true;
 	}

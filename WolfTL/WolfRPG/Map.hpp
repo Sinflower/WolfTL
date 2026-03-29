@@ -64,7 +64,7 @@ public:
 		{
 			RouteCommand rc;
 			if (!rc.Init(coder))
-				throw WolfRPGException(ERROR_TAG + "RouteCommand initialization failed");
+				throw WolfRPGException(std::format("{}RouteCommand initialization failed at index {}", ERROR_TAG, i));
 
 			m_route.push_back(rc);
 		}
@@ -74,7 +74,7 @@ public:
 		{
 			Command::CommandShPtr::Command command = Command::Command::Init(coder);
 			if (!command->Valid())
-				throw WolfRPGException(ERROR_TAG + "Command initialization failed");
+				throw WolfRPGException(std::format("{}Command initialization failed at index {}", ERROR_TAG, i));
 
 			m_commands.push_back(command);
 		}
@@ -90,7 +90,7 @@ public:
 
 		uint8_t terminator = coder.ReadByte();
 		if (terminator != 0x7A)
-			throw WolfRPGException(ERROR_TAG + "Page terminator not 0x7A (found: " + Dec2Hex(terminator) + ")");
+			throw WolfRPGException(std::format("{}Page terminator not 0x7A (found: {:#02x})", ERROR_TAG, terminator));
 
 		return true;
 	}
@@ -152,7 +152,7 @@ public:
 		const uint32_t id = j["id"].get<uint32_t>();
 
 		if (id != m_id)
-			throw WolfRPGException(ERROR_TAG + "Page ID mismatch: " + std::to_string(m_id) + " != " + std::to_string(id));
+			throw WolfRPGException(std::format("{}Page ID mismatch in patch (expected {}, got {})", ERROR_TAG, m_id, id));
 
 		uint32_t cmdIdx = 0;
 
@@ -163,7 +163,7 @@ public:
 
 			const uint32_t index = cmdJ["index"].get<uint32_t>();
 			if (index >= m_commands.size())
-				throw WolfRPGException(ERROR_TAG + "Index out of range: " + std::to_string(index) + " >= " + std::to_string(m_commands.size()));
+				throw WolfRPGException(std::format("{}Command index out of range in patch (index: {}, command count: {})", ERROR_TAG, index, m_commands.size()));
 
 			m_commands[index]->Patch(cmdJ);
 		}
@@ -290,17 +290,17 @@ public:
 		{
 			Page page;
 			if (!page.Init(coder, pageID))
-				throw WolfRPGException(ERROR_TAG + "Page initialization failed");
+				throw WolfRPGException(std::format("{}Page initialization failed at index {}", ERROR_TAG, pageID));
 
 			m_pages.push_back(page);
 			pageID++;
 		}
 
 		if (m_pages.size() != pageCount)
-			throw WolfRPGException(ERROR_TAG + "Expected " + std::to_string(pageCount) + " Pages, but read: " + std::to_string(m_pages.size()) + " Pages");
+			throw WolfRPGException(std::format("{}Expected {} Pages, but read: {} Pages", ERROR_TAG, pageCount, m_pages.size()));
 
 		if (indicator != 0x70)
-			throw WolfRPGException(ERROR_TAG + "Unexpected event indicator: " + Dec2Hex(indicator) + " expected 0x70");
+			throw WolfRPGException(std::format("{}Event terminator not 0x70 (found: {:#02x})", ERROR_TAG, indicator));
 
 		m_valid = true;
 
@@ -347,7 +347,7 @@ public:
 		const uint32_t id = j["id"].get<uint32_t>();
 
 		if (id != m_id)
-			throw WolfRPGException(ERROR_TAG + "Event ID mismatch: " + std::to_string(m_id) + " != " + std::to_string(id));
+			throw WolfRPGException(std::format("{}Event ID mismatch in patch (expected {}, got {})", ERROR_TAG, m_id, id));
 
 		for (std::size_t i = 0; i < m_pages.size(); i++)
 			m_pages[i].Patch(j["pages"][i]);
@@ -452,19 +452,19 @@ protected:
 		{
 			Event ev;
 			if (!ev.Init(coder))
-				throw WolfRPGException(ERROR_TAG + "Event initialization failed");
+				throw WolfRPGException(std::format("{}Event initialization failed at index {}", ERROR_TAG, m_events.size()));
 
 			m_events.push_back(ev);
 		}
 
 		if (m_events.size() != eventCount)
-			throw WolfRPGException(ERROR_TAG + "Expected " + std::to_string(eventCount) + " Events, but read: " + std::to_string(m_events.size()) + " Events");
+			throw WolfRPGException(std::format("{}Expected {} Events, but read: {} Events", ERROR_TAG, eventCount, m_events.size()));
 
 		if (indicator != TERMINATOR)
-			throw WolfRPGException(ERROR_TAG + "Unexpected event indicator: " + Dec2Hex(indicator) + " expected 0x66");
+			throw WolfRPGException(std::format("{}Unexpected event terminator (found: {:#02x}, expected: {:#02x})", ERROR_TAG, indicator, TERMINATOR));
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAGW + L"Map [" + m_filePath.filename().wstring() + L"] has more data than expected");
+			throw WolfRPGException(std::format(L"{}Map [{}] has more data than expected", ERROR_TAGW, m_filePath.filename().wstring()));
 
 		return true;
 	}

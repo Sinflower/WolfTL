@@ -151,7 +151,7 @@ private:
 	void checkValid() const
 	{
 		if (!m_valid)
-			throw WolfRPGException(ERROR_TAGW + L"Invalid WolfRPG object");
+			throw WolfRPGException(std::format(L"{}Invalid WolfRPG object", ERROR_TAGW));
 	}
 
 	void loadGameDat()

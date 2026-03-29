@@ -52,7 +52,7 @@ public:
 		m_filePath = filePath;
 
 		if (m_filePath.empty())
-			throw WolfRPGException(ERROR_TAG + "Trying to load with empty file path");
+			throw WolfRPGException(std::format("{}Trying to load with empty file path", ERROR_TAG));
 
 		g_activeFile = ::GetFileName(m_filePath);
 
@@ -73,7 +73,7 @@ public:
 	bool Load(const Bytes& buffer)
 	{
 		if (buffer.empty())
-			throw WolfRPGException(ERROR_TAG + "Trying to load with empty buffer");
+			throw WolfRPGException(std::format("{}Trying to load with empty buffer", ERROR_TAG));
 
 		FileCoder coder(buffer, FileCoder::Mode::READ, m_fileType, m_seedIndices);
 
@@ -129,7 +129,7 @@ public:
 		patchFilePath += ".json"; // Don't use replace_extension here in case the filename contains a dot
 
 		if (!std::filesystem::exists(patchFilePath))
-			throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFilePath.wstring());
+			throw WolfRPGException(std::format(L"{}Patch file not found: {}", ERROR_TAGW, patchFilePath.wstring()));
 
 		nlohmann::ordered_json j;
 		std::ifstream in(patchFilePath);

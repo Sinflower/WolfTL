@@ -142,7 +142,7 @@ public:
 		const uint32_t id = j["id"].get<uint32_t>();
 
 		if (id != m_intId)
-			throw WolfRPGException(ERROR_TAG + "ID mismatch in patch (expected " + std::to_string(m_intId) + ", got " + std::to_string(id) + ")");
+			throw WolfRPGException(std::format("{}ID mismatch in patch (expected {}, got {})", ERROR_TAG, m_intId, id));
 
 		CHECK_JSON_KEY(j, "name", "CommonEvent");
 		CHECK_JSON_KEY(j, "description", "CommonEvent");
@@ -160,7 +160,7 @@ public:
 
 			const uint32_t index = cmdJ["index"].get<uint32_t>();
 			if (index >= m_commands.size())
-				throw WolfRPGException(ERROR_TAG + "Index out of range: " + std::to_string(index) + " >= " + std::to_string(m_commands.size()));
+				throw WolfRPGException(std::format("{}Command index out of range in patch (index {}, commands count {})", ERROR_TAG, index, m_commands.size()));
 
 			m_commands[index]->Patch(cmdJ);
 		}
@@ -199,7 +199,7 @@ private:
 	{
 		uint8_t indicator = coder.ReadByte();
 		if (indicator != 0x8E)
-			throw WolfRPGException(ERROR_TAG + "CommonEvent header indicator not 0x8E (got " + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(std::format("{}CommonEvent header indicator not 0x8E (got {:#02x})", ERROR_TAG, indicator));
 
 		m_intId = coder.ReadInt();
 
@@ -213,7 +213,7 @@ private:
 			Command::CommandShPtr::Command command = Command::Command::Init(coder);
 
 			if (!command->Valid())
-				throw WolfRPGException(ERROR_TAG + "Command initialization failed");
+				throw WolfRPGException(std::format("{}Initialization of Command #{} in CommonEvent #{} failed", ERROR_TAG, i, m_id));
 
 			m_commands.push_back(command);
 		}
@@ -223,7 +223,7 @@ private:
 
 		indicator = coder.ReadByte();
 		if (indicator != 0x8F)
-			throw WolfRPGException(ERROR_TAG + "CommonEvent data indicator not 0x8F (got " + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(std::format("{}CommonEvent data indicator not 0x8F (got {:#02x})", ERROR_TAG, indicator));
 
 		m_unknown3.resize(coder.ReadInt());
 		for (tString& str : m_unknown3)
@@ -255,7 +255,7 @@ private:
 
 		indicator = coder.ReadByte();
 		if (indicator != 0x91)
-			throw WolfRPGException(ERROR_TAG + "CommonEvent data indicator not 0x91 (got " + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(std::format("{}CommonEvent data indicator not 0x91 (got {:#02x})", ERROR_TAG, indicator));
 
 		m_unknown9 = coder.ReadString();
 
@@ -264,7 +264,7 @@ private:
 		{
 			if (indicator == 0x91) return true;
 
-			throw WolfRPGException(ERROR_TAG + "CommonEvent data indicator not 0x92 or 0x91 (got " + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(std::format("{}CommonEvent data indicator not 0x92 or 0x91 (got {:#02x})", ERROR_TAG, indicator));
 		}
 
 		m_unknown10Valid = true;
@@ -273,7 +273,7 @@ private:
 
 		indicator = coder.ReadByte();
 		if (indicator != 0x92)
-			throw WolfRPGException(ERROR_TAG + "CommonEvent data indicator not 0x92 (got " + Dec2Hex(indicator) + ")");
+			throw WolfRPGException(std::format("{}CommonEvent data indicator not 0x92 (got {:#02x})", ERROR_TAG, indicator));
 
 		return true;
 	}
@@ -348,7 +348,7 @@ public:
 			patchFilePath += ".json"; // Don't use replace_extension here in case the filename contains a dot
 
 			if (!std::filesystem::exists(patchFilePath))
-				throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFilePath.wstring());
+				throw WolfRPGException(std::format(L"{}Patch file not found for CommonEvent ID {}: {}", ERROR_TAGW, ev.GetID(), patchFilePath.wstring()));
 
 			std::ifstream in(patchFilePath);
 			nlohmann::ordered_json j;
@@ -396,10 +396,10 @@ protected:
 
 		m_terminator = coder.ReadByte();
 		if (m_terminator < 0x89)
-			throw WolfRPGException(ERROR_TAG + "CommonEvent data terminator smaller than 0x89 (got " + Dec2Hex(m_terminator) + ")");
+			throw WolfRPGException(std::format("{}CommonEvent data terminator smaller than 0x89 (got {:#02x})", ERROR_TAG, m_terminator));
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAG + "CommonEvent has more data than expected");
+			throw WolfRPGException(std::format("{}CommonEvent has more data than expected", ERROR_TAG));
 
 		return true;
 	}

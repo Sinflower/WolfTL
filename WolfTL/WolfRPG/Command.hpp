@@ -401,7 +401,7 @@ public:
 	virtual void SetText(const tString& value, const uint32_t& index)
 	{
 		if (m_stringArgs.size() <= index)
-			throw WolfRPGException(ERROR_TAGW + L"setText(" + value + L", " + std::to_wstring(index) + L") out of range");
+			throw WolfRPGException(std::format(L"{}setText({}, {}) index out of range (size: {})", ERROR_TAGW, value, index, m_stringArgs.size()));
 
 		m_stringArgs[index] = value;
 	}
@@ -490,7 +490,7 @@ public:
 	virtual const tString Text() const
 	{
 		if (Type() != PictureType::text)
-			throw WolfRPGException(ERROR_TAG + "Picture type \"" + std::to_string(static_cast<int32_t>(Type())) + "\" has no text");
+			throw WolfRPGException(std::format("{}Picture type \"{}\" has no text", ERROR_TAG, static_cast<int32_t>(Type())));
 
 		if (m_stringArgs.empty())
 			return L"";
@@ -501,7 +501,7 @@ public:
 	virtual void SetText(const tString& value)
 	{
 		if (Type() != PictureType::text)
-			throw WolfRPGException(ERROR_TAG + "Picture type \"" + std::to_string(static_cast<int32_t>(Type())) + "\" has no text");
+			throw WolfRPGException(std::format("{}Picture type \"{}\" has no text", ERROR_TAG, static_cast<int32_t>(Type())));
 
 		if (m_stringArgs.empty())
 			m_stringArgs.push_back(value);
@@ -512,7 +512,7 @@ public:
 	virtual const tString Filename() const
 	{
 		if (Type() != PictureType::file && Type() != PictureType::windowFile)
-			throw WolfRPGException(ERROR_TAG + "Picture type \"" + std::to_string(static_cast<int32_t>(Type())) + "\" has no text");
+			throw WolfRPGException(std::format("{}Picture type \"{}\" has no filename", ERROR_TAG, static_cast<int32_t>(Type())));
 
 		return m_stringArgs[0];
 	}
@@ -520,7 +520,7 @@ public:
 	virtual void SetFilename(const tString& value)
 	{
 		if (Type() != PictureType::file && Type() != PictureType::windowFile)
-			throw WolfRPGException(ERROR_TAG + "Picture type \"" + std::to_string(static_cast<int32_t>(Type())) + "\" has no text");
+			throw WolfRPGException(std::format("{}Picture type \"{}\" has no filename", ERROR_TAG, static_cast<int32_t>(Type())));
 
 		m_stringArgs[0] = value;
 	}
@@ -544,7 +544,7 @@ public:
 		{
 			RouteCommand rc;
 			if (!rc.Init(coder))
-				throw WolfRPGException(ERROR_TAG + "RouteCommand initialization failed");
+				throw WolfRPGException(std::format("{}RouteCommand initialization failed at index {} of {}", ERROR_TAG, i, routeCount));
 
 			m_route.push_back(rc);
 		}
@@ -720,7 +720,7 @@ inline CommandShPtr::Command Command::Command::Init(FileCoder& coder)
 	if (terminator == 0x01)
 		cmd = std::make_shared<CommandSpecialClasses::Move>(cid, args, stringArgs, indent, coder);
 	else if (terminator != TERMINATOR)
-		throw WolfRPGException(ERROR_TAG + "Unexpected command terminator: " + std::to_string(terminator));
+		throw WolfRPGException(std::format("{}Unexpected command terminator: {:#02x} (expected {:#02x} or 0x01)", ERROR_TAG, terminator, TERMINATOR));
 	else
 	{
 		switch (cid)

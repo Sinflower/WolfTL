@@ -253,7 +253,7 @@ public:
 			const std::string fieldNameJson = fieldData["name"].get<std::string>();
 
 			if (fieldName != fieldNameJson)
-				throw WolfRPGException(ERROR_TAG + "Data field name mismatch - Expected: \"" + fieldName + "\" - Got: \"" + fieldNameJson + "\"");
+				throw WolfRPGException(std::format("{}Data field name mismatch at index {} - Expected: \"{}\" - Got: \"{}\"", ERROR_TAG, i, fieldName, fieldNameJson));
 
 			if (field.IsString())
 				m_stringValues[field.Index()] = ToUTF16(fieldData["value"].get<std::string>());
@@ -476,13 +476,13 @@ public:
 		m_description = ToUTF16(j["description"].get<std::string>());
 
 		if (m_fields.size() != j["fields"].size())
-			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'fields' expected: " + std::to_string(m_fields.size()) + " - got: " + std::to_string(j["fields"].size()));
+			throw WolfRPGException(std::format("{}Count mismatch for object 'fields' expected: {} - got: {}", ERROR_TAG, m_fields.size(), j["fields"].size()));
 
 		for (std::size_t i = 0; i < m_fields.size(); i++)
 			m_fields[i].Patch(j["fields"][i]);
 
 		if (m_data.size() != j["data"].size())
-			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'data' expected: " + std::to_string(m_data.size()) + " - got: " + std::to_string(j["data"].size()));
+			throw WolfRPGException(std::format("{}Count mismatch for object 'data' expected: {} - got: {}", ERROR_TAG, m_data.size(), j["data"].size()));
 
 		for (std::size_t i = 0; i < m_data.size(); i++)
 			m_data[i].Patch(j["data"][i]);
@@ -607,7 +607,7 @@ public:
 		patchFilePath += ".json";
 
 		if (!std::filesystem::exists(patchFilePath))
-			throw WolfRPGException(ERROR_TAGW + L"Patch file not found: " + patchFilePath.wstring());
+			throw WolfRPGException(std::format(L"{}Patch file not found: {}", ERROR_TAGW, patchFilePath.wstring()));
 
 		nlohmann::ordered_json j;
 		std::ifstream in(patchFilePath);
@@ -617,7 +617,7 @@ public:
 		CHECK_JSON_KEY(j, "types", "Database");
 
 		if (m_types.size() != j["types"].size())
-			throw WolfRPGException(ERROR_TAG + "Count mismatch for object 'types' expected: " + std::to_string(m_types.size()) + " - got: " + std::to_string(j["types"].size()));
+			throw WolfRPGException(std::format("{}Count mismatch for object 'types' expected: {} - got: {}", ERROR_TAG, m_types.size(), j["types"].size()));
 
 		for (std::size_t i = 0; i < m_types.size(); i++)
 			m_types[i].Patch(j["types"][i]);
@@ -659,33 +659,27 @@ private:
 				m_types.push_back(Type(coder));
 
 			if (!coder.IsEof())
-				throw WolfRPGException(ERROR_TAGW + L"Database [" + m_projectFilePath.wstring() + L"] has more data than expected");
+				throw WolfRPGException(std::format(L"{}Project file [{}] has more data than expected", ERROR_TAGW, m_projectFilePath.wstring()));
 		}
 
 		g_activeFile     = ::GetFileName(m_datFilePath);
 		uint32_t typeCnt = coder.ReadInt();
 		if (typeCnt != m_types.size())
-		{
-			throw WolfRPGException(ERROR_TAGW + L"Database [" + m_datFilePath.wstring() + L"] project and dat type count mismatch expected: " + std::to_wstring(m_types.size()) + L"  - got: " + std::to_wstring(typeCnt));
-			return false;
-		}
+			throw WolfRPGException(std::format(L"{}Database [{}] project and dat type count mismatch expected: {}  - got: {}", ERROR_TAGW, m_datFilePath.wstring(), m_types.size(), typeCnt));
 
 		uint32_t cnt = 0;
 		for (Type& type : m_types)
 		{
 			cnt++;
 			if (!type.ReadDat(coder))
-			{
-				throw WolfRPGException(ERROR_TAG + "Failed at readDat for type(" + std::to_string(cnt) + ")");
-				return false;
-			}
+				throw WolfRPGException(std::format("{}Failed at readDat for type({})", ERROR_TAG, cnt));
 		}
 
 		if (coder.ReadByte() != m_version)
-			throw WolfRPGException(ERROR_TAGW + L"No " + Dec2HexW(m_version) + L" terminator at the end of \"" + m_datFilePath.wstring() + L"\"");
+			throw WolfRPGException(std::format(L"{}No {} terminator at the end of [{}]", ERROR_TAGW, Dec2HexW(m_version), m_datFilePath.wstring()));
 
 		if (!coder.IsEof())
-			throw WolfRPGException(ERROR_TAGW + L"Database [" + m_datFilePath.wstring() + L"] has more data than expected");
+			throw WolfRPGException(std::format(L"{}Database [{}] has more data than expected", ERROR_TAGW, m_datFilePath.wstring()));
 
 		return true;
 	}

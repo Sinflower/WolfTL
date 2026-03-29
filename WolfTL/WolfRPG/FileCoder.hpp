@@ -144,10 +144,10 @@ public:
 		m_fileType(fileType)
 	{
 		if (mode != Mode::READ)
-			throw WolfRPGException(ERROR_TAG + "FileCoder: Only READ mode is supported for buffer input.");
+			throw WolfRPGException(std::format("{}FileCoder: Only READ mode is supported for buffer input.", ERROR_TAG));
 
 		if (buffer.empty())
-			throw WolfRPGException(ERROR_TAG + "FileCoder: Buffer is empty.");
+			throw WolfRPGException(std::format("{}FileCoder: Buffer is empty", ERROR_TAG));
 
 		m_reader.InitData(buffer);
 		load();
@@ -158,7 +158,7 @@ public:
 		m_fileType(fileType)
 	{
 		if (mode == Mode::READ)
-			throw WolfRPGException(ERROR_TAG + "FileCoder: READ mode requires a filename or buffer.");
+			throw WolfRPGException(std::format("{}FileCoder: READ mode requires a filename or buffer.", ERROR_TAG));
 	}
 
 	void Unpack(const bool& seekBack = false)
@@ -173,7 +173,7 @@ public:
 		int32_t decSize = LZ4_decompress_safe(reinterpret_cast<const char*>(m_reader.Get()), reinterpret_cast<char*>(&decData[startOffset]), encDataSize, decDataSize);
 
 		if (decSize < 0)
-			throw WolfRPGException(ERROR_TAG + "LZ4 decompression failed.");
+			throw WolfRPGException(std::format("{}LZ4 decompression failed. Compressed size: {}, Decompressed size: {}", ERROR_TAG, encDataSize, decDataSize));
 
 		m_reader.Seek(0);
 		std::memcpy(decData.data(), m_reader.Get(), startOffset); // Copy header
@@ -190,7 +190,7 @@ public:
 		std::vector<uint8_t> encData(dataSize, 0);
 		int32_t encSize = LZ4_compress_default(reinterpret_cast<const char*>(m_writer.Get()), reinterpret_cast<char*>(encData.data()), dataSize, dataSize);
 		if (encSize < 0)
-			throw WolfRPGException(ERROR_TAG + "LZ4 compression failed.");
+			throw WolfRPGException(std::format("{}LZ4 compression failed. Data size: {}", ERROR_TAG, dataSize));
 
 		encData.resize(encSize);
 		m_writer.Clear();
@@ -263,7 +263,7 @@ public:
 		uint32_t size = ReadInt();
 
 		if (size == 0)
-			throw WolfRPGException(ERROR_TAG + "Zero length string encountered.");
+			throw WolfRPGException(std::format("{}Zero length string encountered at offset {:#010x}.", ERROR_TAG, m_reader.GetOffset() - 4));
 
 		Bytes data = Read(size);
 
@@ -480,7 +480,7 @@ private:
 	{
 		iconv_t cd = iconv_open("WCHAR_T", "SHIFT-JIS");
 		if (cd == (iconv_t)-1)
-			throw WolfRPGException("iconv_open failed");
+			throw WolfRPGException(std::format("{}iconv_open failed with error: {}", ERROR_TAG, strerror(errno)));
 
 		std::size_t inBytesLeft  = sjis.size();
 		std::size_t outBytesLeft = inBytesLeft * sizeof(wchar_t);
@@ -494,7 +494,7 @@ private:
 		if (result == static_cast<std::size_t>(-1))
 		{
 			iconv_close(cd);
-			throw WolfRPGException("iconv conversion failed");
+			throw WolfRPGException(std::format("{}iconv conversion failed with error: {}", ERROR_TAG, strerror(errno)));
 		}
 
 		// Resize to actual number of wchar_t elements present
@@ -510,7 +510,7 @@ private:
 	{
 		iconv_t cd = iconv_open("SHIFT-JIS", "WCHAR_T");
 		if (cd == (iconv_t)-1)
-			throw WolfRPGException("iconv_open failed");
+			throw WolfRPGException(std::format("{}iconv_open failed with error: {}", ERROR_TAG, strerror(errno)));
 
 		std::size_t inBytesLeft  = utf8.size() * sizeof(wchar_t);
 		std::size_t outBytesLeft = inBytesLeft * 4; // worst case size
@@ -536,7 +536,7 @@ private:
 				else
 				{
 					iconv_close(cd);
-					throw WolfRPGException("iconv conversion failed");
+					throw WolfRPGException(std::format("{}iconv conversion failed with error: {}", ERROR_TAG, strerror(errno)));
 				}
 			}
 		}
@@ -627,7 +627,7 @@ private:
 		m_reader.Seek(0);
 		Bytes data = Read();
 		if (!wolf::crypt::datadecrypt::v3_5::decryptData(data, m_fileType))
-			throw WolfRPGException(ERROR_TAG + "Failed to decrypt ProV3 data.");
+			throw WolfRPGException(std::format("{}Failed to decrypt ProV3.5 data for file type {}", ERROR_TAG, static_cast<int>(m_fileType)));
 
 		// wasEncrypted is not set here because the decryption function adds the required headers
 		s_isUTF8 = true;

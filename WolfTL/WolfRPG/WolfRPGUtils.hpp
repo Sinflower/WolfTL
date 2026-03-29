@@ -181,7 +181,7 @@ inline void CheckAndCreateDir(const std::filesystem::path& path)
 		if (!std::filesystem::create_directories(path))
 		{
 			if (!std::filesystem::exists(path))
-				throw WolfRPGException(ERROR_TAGW + L"Failed to create directory: " + path.wstring());
+				throw WolfRPGException(std::format("{}Failed to create directory: {}", ERROR_TAG, path.string()));
 		}
 	}
 }
