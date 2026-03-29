@@ -52,16 +52,16 @@ inline std::string ws2s(const std::wstring& wstr)
 }
 } // namespace fileAccessUtils
 
-class FileWalkerException : public std::exception
+class FileReaderException : public std::exception
 {
 public:
-	explicit FileWalkerException(const std::string& what) :
+	explicit FileReaderException(const std::string& what) :
 		m_what(what) {}
 
-	explicit FileWalkerException(const std::wstring& what) :
+	explicit FileReaderException(const std::wstring& what) :
 		m_what(fileAccessUtils::ws2s(what)) {}
 
-	virtual ~FileWalkerException() noexcept {}
+	virtual ~FileReaderException() noexcept {}
 
 	virtual const char* what() const throw()
 	{
@@ -105,7 +105,7 @@ public:
 		m_pData   = m_dataVec.data();
 
 		if (m_dataVec.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max()))
-			throw(FileWalkerException("Data size exceeds maximum uint32_t value"));
+			throw(FileReaderException("Data size exceeds maximum uint32_t value"));
 
 		m_size = static_cast<uint32_t>(m_dataVec.size());
 		m_init = true;
@@ -169,7 +169,7 @@ public:
 		else if (size <= buffer.size())
 			ReadBytes(buffer.data(), size);
 		else
-			throw(FileWalkerException("ReadBytesArr: size is larger than buffer size"));
+			throw(FileReaderException("ReadBytesArr: size is larger than buffer size"));
 	}
 
 	void ReadBytesVec(std::vector<uint8_t>& buffer, const uint32_t& size = -1)
@@ -179,7 +179,7 @@ public:
 		else if (size <= buffer.size())
 			ReadBytes(buffer.data(), size);
 		else
-			throw(FileWalkerException("ReadBytesVec: size is larger than buffer size"));
+			throw(FileReaderException("ReadBytesVec: size is larger than buffer size"));
 	}
 
 	void ReadBytes(void* pBuffer, const std::size_t& size)
@@ -190,10 +190,10 @@ public:
 	void ReadBytes(void* pBuffer, const uint32_t& size)
 	{
 		if (!m_init)
-			throw(FileWalkerException("FileWalker not initialized"));
+			throw(FileReaderException("FileWalker not initialized"));
 
 		if (m_offset + size > m_size)
-			throw(FileWalkerException("ReadBytes: Attempted to read past end of file"));
+			throw(FileReaderException("ReadBytes: Attempted to read past end of file"));
 
 		std::memcpy(pBuffer, m_pData + m_offset, size);
 		m_offset += size;
@@ -207,16 +207,16 @@ public:
 		else if (numElems <= buffer.size())
 			ReadBytes(buffer.data(), numElems * sizeof(T));
 		else
-			throw(FileWalkerException("ReadVec: size is larger than buffer size"));
+			throw(FileReaderException("ReadVec: size is larger than buffer size"));
 	}
 
 	void Seek(const uint32_t& offset)
 	{
 		if (!m_init)
-			throw(FileWalkerException("FileWalker not initialized"));
+			throw(FileReaderException("FileWalker not initialized"));
 
 		if (offset > m_size)
-			throw(FileWalkerException("Seek: Attempted to seek past end of file"));
+			throw(FileReaderException("Seek: Attempted to seek past end of file"));
 
 		m_offset = offset;
 	}
@@ -224,10 +224,10 @@ public:
 	void Skip(const uint32_t& size)
 	{
 		if (!m_init)
-			throw(FileWalkerException("FileWalker not initialized"));
+			throw(FileReaderException("FileWalker not initialized"));
 
 		if (m_offset + size > m_size)
-			throw(FileWalkerException("Skip: Attempted to skip past end of file"));
+			throw(FileReaderException("Skip: Attempted to skip past end of file"));
 
 		m_offset += size;
 	}
@@ -255,10 +255,10 @@ public:
 	uint8_t At(const uint32_t& offset) const
 	{
 		if (!m_init)
-			throw(FileWalkerException("FileWalker not initialized"));
+			throw(FileReaderException("FileWalker not initialized"));
 
 		if (offset >= m_size)
-			throw(FileWalkerException("At: Attempted to read past end of file"));
+			throw(FileReaderException("At: Attempted to read past end of file"));
 
 		return *(m_pData + offset);
 	}
@@ -267,7 +267,7 @@ public:
 	{
 		std::ofstream file(filePath, std::ios::out | std::ios::binary);
 		if (!file.is_open())
-			throw(FileWalkerException(L"Failed to open file for dumping: " + filePath.wstring()));
+			throw(FileReaderException(L"Failed to open file for dumping: " + filePath.wstring()));
 		file.write(reinterpret_cast<const char*>(m_pData), m_size);
 	}
 
@@ -292,13 +292,13 @@ private:
 	{
 		m_pFile = CreateFileW(filePath.wstring().c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 		if (m_pFile == nullptr)
-			throw(FileWalkerException(L"Failed to open file: " + filePath.wstring()));
+			throw(FileReaderException(L"Failed to open file: " + filePath.wstring()));
 
 		m_pFileMap = CreateFileMappingW(m_pFile, NULL, PAGE_READONLY, 0, 0, NULL);
 		if (m_pFileMap == nullptr)
 		{
 			CloseHandle(m_pFile);
-			throw(FileWalkerException(L"Failed to create file mapping for: " + filePath.wstring()));
+			throw(FileReaderException(L"Failed to create file mapping for: " + filePath.wstring()));
 		}
 
 		m_pMapView = MapViewOfFile(m_pFileMap, FILE_MAP_READ, 0, 0, 0);
@@ -306,7 +306,7 @@ private:
 		{
 			CloseHandle(m_pFileMap);
 			CloseHandle(m_pFile);
-			throw(FileWalkerException(L"Failed to create map view of file: " + filePath.wstring()));
+			throw(FileReaderException(L"Failed to create map view of file: " + filePath.wstring()));
 		}
 
 		m_pData = reinterpret_cast<PBYTE>(m_pMapView);
@@ -317,14 +317,14 @@ private:
 	{
 		m_fd = ::open(filePath.string().c_str(), O_RDONLY);
 		if (m_fd == -1)
-			throw FileWalkerException("Failed to open file: " + filePath.string());
+			throw FileReaderException("Failed to open file: " + filePath.string());
 
 		m_pMapView = ::mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, m_fd, 0);
 
 		if (m_pMapView == MAP_FAILED)
 		{
 			::close(m_fd);
-			throw FileWalkerException("Failed to mmap file: " + filePath.string());
+			throw FileReaderException("Failed to mmap file: " + filePath.string());
 		}
 
 		m_pData = reinterpret_cast<unsigned char*>(m_pMapView);
@@ -380,10 +380,10 @@ private:
 	T read()
 	{
 		if (!m_init)
-			throw(FileWalkerException("FileWalker not initialized"));
+			throw(FileReaderException("FileWalker not initialized"));
 
 		if (m_offset + sizeof(T) > m_size)
-			throw(FileWalkerException("read: End of file reached"));
+			throw(FileReaderException("read: End of file reached"));
 
 		T value = *(reinterpret_cast<T*>(m_pData + m_offset));
 		m_offset += sizeof(T);
