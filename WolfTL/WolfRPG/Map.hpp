@@ -179,9 +179,19 @@ public:
 		return m_graphicName;
 	}
 
+	void SetGraphicName(const tString& name)
+	{
+		m_graphicName = name;
+	}
+
 	const uint8_t& GetGraphicDirection() const
 	{
 		return m_graphicDirection;
+	}
+
+	void SetGraphicDirection(const uint8_t& direction)
+	{
+		m_graphicDirection = direction;
 	}
 
 	const uint8_t& GetGraphicFrame() const
@@ -189,14 +199,29 @@ public:
 		return m_graphicFrame;
 	}
 
+	void SetGraphicFrame(const uint8_t& frame)
+	{
+		m_graphicFrame = frame;
+	}
+
 	const uint8_t& GetGraphicOpacity() const
 	{
 		return m_graphicOpacity;
 	}
 
+	void SetGraphicOpacity(const uint8_t& opacity)
+	{
+		m_graphicOpacity = opacity;
+	}
+
 	const uint8_t& GetGraphicRenderMode() const
 	{
 		return m_graphicRenderMode;
+	}
+
+	void SetGraphicRenderMode(const uint8_t& renderMode)
+	{
+		m_graphicRenderMode = renderMode;
 	}
 
 	const Bytes& GetConditions() const
@@ -234,14 +259,29 @@ public:
 		return m_shadowGraphicNum;
 	}
 
+	void SetShadowGraphicNum(const uint8_t& num)
+	{
+		m_shadowGraphicNum = num;
+	}
+
 	const uint8_t& GetCollisionWidth() const
 	{
 		return m_collisionWidth;
 	}
 
+	void SetCollisionWidth(const uint8_t& width)
+	{
+		m_collisionWidth = width;
+	}
+
 	const uint8_t& GetCollisionHeight() const
 	{
 		return m_collisionHeight;
+	}
+
+	void SetCollisionHeight(const uint8_t& height)
+	{
+		m_collisionHeight = height;
 	}
 
 private:
@@ -363,14 +403,29 @@ public:
 		return m_name;
 	}
 
+	void SetName(const tString& name)
+	{
+		m_name = name;
+	}
+
 	const uint32_t& GetX() const
 	{
 		return m_x;
 	}
 
+	void SetX(const uint32_t& x)
+	{
+		m_x = x;
+	}
+
 	const uint32_t& GetY() const
 	{
 		return m_y;
+	}
+
+	void SetY(const uint32_t& y)
+	{
+		m_y = y;
 	}
 
 	const Pages& GetPages() const
@@ -410,6 +465,31 @@ public:
 	const Events& GetEvents() const
 	{
 		return m_events;
+	}
+
+	const uint32_t& GetTilesetID() const
+	{
+		return m_tilesetID;
+	}
+
+	const uint32_t& GetWidth() const
+	{
+		return m_width;
+	}
+
+	void SetWidth(const uint32_t& width)
+	{
+		m_width = width;
+	}
+
+	const uint32_t& GetHeight() const
+	{
+		return m_height;
+	}
+
+	void SetHeight(const uint32_t& height)
+	{
+		m_height = height;
 	}
 
 protected:

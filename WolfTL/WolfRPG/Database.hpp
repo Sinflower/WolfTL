@@ -166,6 +166,11 @@ public:
 		return m_name;
 	}
 
+	void SetName(const tString& name)
+	{
+		m_name = name;
+	}
+
 private:
 private:
 	tString m_name          = TEXT("");
@@ -295,6 +300,11 @@ public:
 	const tString& GetName() const
 	{
 		return m_name;
+	}
+
+	void SetName(const tString& name)
+	{
+		m_name = name;
 	}
 
 private:
@@ -496,6 +506,11 @@ public:
 							m_description.end());
 	}
 
+	const Fields& GetFields() const
+	{
+		return m_fields;
+	}
+
 	const Datas& GetData() const
 	{
 		return m_data;
@@ -504,6 +519,21 @@ public:
 	const tString& GetName() const
 	{
 		return m_name;
+	}
+
+	void SetName(const tString& name)
+	{
+		m_name = name;
+	}
+
+	const tString& GetDescription() const
+	{
+		return m_description;
+	}
+
+	void SetDescription(const tString& description)
+	{
+		m_description = description;
 	}
 
 private:

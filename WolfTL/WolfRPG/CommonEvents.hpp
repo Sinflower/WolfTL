@@ -189,6 +189,11 @@ public:
 		return m_name;
 	}
 
+	void SetName(const tString& name)
+	{
+		m_name = name;
+	}
+
 	const Command::Commands& GetCommands() const
 	{
 		return m_commands;

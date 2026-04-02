@@ -411,6 +411,11 @@ public:
 		return m_stringArgs;
 	}
 
+	virtual const uInts& GetIntArgs() const
+	{
+		return m_args;
+	}
+
 	virtual const PictureType Type() const
 	{
 		return PictureType::invalid;

@@ -56,9 +56,19 @@ public:
 		return m_title;
 	}
 
+	void SetTitle(const tString& title)
+	{
+		m_title = title;
+	}
+
 	const tString& GetTitlePlus() const
 	{
 		return m_titlePlus;
+	}
+
+	void SetTitlePlus(const tString& titlePlus)
+	{
+		m_titlePlus = titlePlus;
 	}
 
 	const tString& GetFont() const
@@ -66,9 +76,22 @@ public:
 		return m_font;
 	}
 
+	void SetFont(const tString& font)
+	{
+		m_font = font;
+	}
+
 	const tStrings& GetSubFonts() const
 	{
 		return m_subFonts;
+	}
+
+	void SetSubFonts(const tStrings& subFonts)
+	{
+		m_subFonts = subFonts;
+
+		// Ensure there are always 3 subfont entries, even if some of them are empty
+		m_subFonts.resize(3);
 	}
 
 protected:
