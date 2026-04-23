@@ -184,12 +184,24 @@ public:
 			m_reader.Seek(startOffset);
 	}
 
-	void Pack()
+void Pack()
 	{
 		const uint32_t dataSize = static_cast<uint32_t>(m_writer.GetSize());
-		std::vector<uint8_t> encData(dataSize, 0);
-		int32_t encSize = LZ4_compress_default(reinterpret_cast<const char*>(m_writer.Get()), reinterpret_cast<char*>(encData.data()), dataSize, dataSize);
-		if (encSize < 0)
+        
+		// FIX: Use LZ4_compressBound to allocate the correct maximum buffer size
+		const int32_t maxDstSize = LZ4_compressBound(dataSize);
+		std::vector<uint8_t> encData(maxDstSize, 0);
+
+		// FIX: Pass maxDstSize as the destination capacity
+		int32_t encSize = LZ4_compress_default(
+			reinterpret_cast<const char*>(m_writer.Get()), 
+			reinterpret_cast<char*>(encData.data()), 
+			dataSize, 
+			maxDstSize
+		);
+
+		// FIX: LZ4 returns 0 on failure, so we must check <= 0
+		if (encSize <= 0)
 			throw WolfRPGException(std::format("{}LZ4 compression failed. Data size: {}", ERROR_TAG, dataSize));
 
 		encData.resize(encSize);
