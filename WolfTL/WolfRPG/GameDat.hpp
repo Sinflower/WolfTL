@@ -97,7 +97,10 @@ public:
 protected:
 	bool load(FileCoder& coder) override
 	{
-		m_oldSize = coder.GetSize() + static_cast<uint32_t>(FileCoder::CRYPT_HEADER_SIZE) - 1;
+		m_oldSize = coder.GetSize() - 1;
+
+		if (coder.GetOffset() == 0)
+			m_oldSize += static_cast<uint32_t>(FileCoder::CRYPT_HEADER_SIZE);
 
 		m_unknown1    = coder.ReadByteArray();
 		m_stringCount = coder.ReadInt();
