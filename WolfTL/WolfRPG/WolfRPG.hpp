@@ -177,7 +177,14 @@ private:
 			{
 				std::wcout << "\rLoading Map: " << pp.filename() << std::setfill(TCHAR(' ')) << std::setw(prevLength) << "" << std::flush;
 				prevLength = pp.filename().wstring().length();
-				m_maps.push_back(Map(pp, m_saveUncompressed));
+				try
+				{
+					m_maps.push_back(Map(pp, m_saveUncompressed));
+				}
+				catch ([[maybe_unused]] const WolfRPGException& e)
+				{
+					//std::wcout << " - Failed, skipping" << std::endl;
+				}
 			}
 		}
 

@@ -167,6 +167,9 @@ public:
 		const uint32_t decDataSize = m_reader.ReadUInt32();
 		const uint32_t encDataSize = m_reader.ReadUInt32();
 
+		if (encDataSize > m_reader.GetSize() - startOffset)
+			throw WolfRPGException(std::format("{}LZ4 decompression failed. Compressed size: {}, Remaining size: {}", ERROR_TAG, encDataSize, m_reader.GetSize() - startOffset));
+
 		Bytes decData(decDataSize + startOffset, 0);
 
 		// lz4Unpack(m_reader.Get(), &decData[startOffset], encDataSize);
@@ -226,6 +229,21 @@ public:
 			uint32_t o = m_reader.GetOffset() + pos;
 			m_reader.Seek(o);
 		}
+	}
+
+	uint8_t At(const uint32_t& offset) const
+	{
+		if (m_mode != Mode::READ)
+			throw WolfRPGException(std::format("{}FileCoder: At() is only available in READ mode.", ERROR_TAG));
+
+		return m_reader.At(offset);
+	}
+
+	uint32_t GetOffset() const
+	{
+		if (m_mode == Mode::READ)
+			return m_reader.GetOffset();
+		return 0;
 	}
 
 	bool IsEof() const

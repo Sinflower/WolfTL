@@ -495,6 +495,11 @@ public:
 protected:
 	bool load(FileCoder& coder)
 	{
+		const uint32_t lastByteOffset = coder.GetSize() - 1;
+
+		if (coder.At(lastByteOffset) != TERMINATOR)
+			throw WolfRPGException(std::format("{}Map terminator not 0x66 (found: {:#02x})", ERROR_TAG, coder.At(lastByteOffset)));
+
 		m_version  = coder.ReadInt();
 		m_unknown2 = coder.ReadByte();
 		m_unknown3 = coder.ReadString();
@@ -513,32 +518,38 @@ protected:
 			Command::Command::s_v35 = true;
 		}
 
-		bool readTiles = true;
-
-		if (FileCoder::IsUTF8())
-		{
-			int32_t v = coder.ReadInt();
-			if (v == -1)
-				readTiles = false;
-			else
-				coder.Seek(-4);
-		}
-
-		if (readTiles)
-			m_tiles = coder.Read(m_width * m_height * m_layerCnt * 4);
-
 		uint8_t indicator = 0x0;
-		while ((indicator = coder.ReadByte()) == EVENT_INDICATOR)
+
+		if (coder.GetOffset() != lastByteOffset)
 		{
-			Event ev;
-			if (!ev.Init(coder))
-				throw WolfRPGException(std::format("{}Event initialization failed at index {}", ERROR_TAG, m_events.size()));
+			bool readTiles = true;
 
-			m_events.push_back(ev);
+			if (FileCoder::IsUTF8())
+			{
+				int32_t v = coder.ReadInt();
+				if (v == -1)
+					readTiles = false;
+				else
+					coder.Seek(-4);
+			}
+
+			if (readTiles)
+				m_tiles = coder.Read(m_width * m_height * m_layerCnt * 4);
+
+			while ((indicator = coder.ReadByte()) == EVENT_INDICATOR)
+			{
+				Event ev;
+				if (!ev.Init(coder))
+					throw WolfRPGException(std::format("{}Event initialization failed at index {}", ERROR_TAG, m_events.size()));
+
+				m_events.push_back(ev);
+			}
+
+			if (m_events.size() != eventCount)
+				throw WolfRPGException(std::format("{}Expected {} Events, but read: {} Events", ERROR_TAG, eventCount, m_events.size()));
 		}
-
-		if (m_events.size() != eventCount)
-			throw WolfRPGException(std::format("{}Expected {} Events, but read: {} Events", ERROR_TAG, eventCount, m_events.size()));
+		else
+			indicator = coder.ReadByte();
 
 		if (indicator != TERMINATOR)
 			throw WolfRPGException(std::format("{}Unexpected event terminator (found: {:#02x}, expected: {:#02x})", ERROR_TAG, indicator, TERMINATOR));
